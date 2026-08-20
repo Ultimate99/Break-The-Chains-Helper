@@ -1,11 +1,12 @@
-# TG:BTC Game Assistant 7.0.1 — Daily Assistant UI Fix
+# TG:BTC Game Assistant 7.0.2 — Daily Home Guard
 
-Hotfix for the blank Daily Assistant page introduced in 7.0.0.
+Hotfix for Daily Assistant modules attempting to leave TG:BTC while trying to locate the Home screen.
 
 ## Fixed
-- Daily Assistant cards now render correctly.
-- Corrected misuse of `_make_card()`, which returns `(card, body)` rather than a single widget.
-- Corrected `UI_MUTED2` typo to the existing `UI_MUTED_2` palette constant.
-- Verified all seven Daily modules are created: Mail, Events, Shop, Recruit, Quest Pass, Idle Rewards, and Current Screen.
+- Removed every automatic Android BACK press from Daily module Home verification.
+- Daily Assistant now checks the current screen read-only; it never navigates backward to find Home.
+- If a module is started away from Home, it stops safely and asks the user to open Home manually.
+- Current Screen collector remains navigation-free.
+- Existing Mail, Events, Shop, Recruit, Quest Pass, Idle Rewards, Arena, Intelligence, Strategy, History and Diagnostics behavior is preserved.
 
-No daily-route logic or Arena/Intelligence/Strategy behavior was changed in this hotfix.
+This fixes the case where pressing START on a Daily module could send `KEYCODE_BACK` repeatedly and reach the game's exit action.
