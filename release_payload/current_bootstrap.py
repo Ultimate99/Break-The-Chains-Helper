@@ -1,22 +1,23 @@
-# TG:BTC Game Assistant v7.0.1 Daily Assistant UI hotfix bootstrap
+# TG:BTC Game Assistant v7.0.2 Daily Home Guard hotfix bootstrap
 import os, subprocess, sys
 from pathlib import Path
 
-APP_VERSION = "7.0.1"
-OLD_VERSION = 'APP_VERSION = "7.0.0"'
-NEW_VERSION = 'APP_VERSION = "7.0.1"'
+APP_VERSION = "7.0.2"
+OLD_VERSION = 'APP_VERSION = "7.0.1"'
+NEW_VERSION = 'APP_VERSION = "7.0.2"'
 
-OLD_SAFE = '''        safe = self._make_card(page)\n        safe.pack(fill="x", padx=26, pady=(0, 12))\n        safe_inner = tk.Frame(safe, bg=UI_CARD)\n        safe_inner.pack(fill="x", padx=16, pady=14)\n'''
-NEW_SAFE = '''        safe, safe_inner = self._make_card(page, padx=16, pady=14)\n        safe.pack(fill="x", padx=26, pady=(0, 12))\n'''
+OLD_HOME = '''    def _daily_ensure_home(self):\n        # Conservative: only use Android Back while OCR positively tells us we\n        # are not yet on Home. Give up rather than guessing.\n        for _ in range(5):\n            if self.daily_stop_event.is_set(): return False\n            ref=self._phone_reference_screenshot()\n            if self._daily_home_signature(ref): return True\n            adb(["shell","input","keyevent","4"])\n            time.sleep(0.75)\n        return self._daily_home_signature(self._phone_reference_screenshot())\n'''
 
-OLD_CARD = '''            card=self._make_card(body)\n            card.grid(row=i//2, column=i%2, sticky="nsew", padx=(0,7) if i%2==0 else (7,0), pady=7)\n            top=tk.Frame(card,bg=UI_CARD); top.pack(fill="x", padx=14, pady=(12,5))\n            self._label(top,name,bg=UI_CARD,size=11,weight="bold").pack(side="left")\n            self._label(top,textvariable=self._daily_var(name,"READY" if name!="Idle Rewards" else "NEEDS ROUTE"),bg=UI_CARD,fg=UI_GREEN if name!="Idle Rewards" else UI_AMBER,size=8,weight="bold").pack(side="right")\n            self._label(card,desc,bg=UI_CARD,fg=UI_MUTED,size=8).pack(anchor="w",padx=14)\n            self._label(card,rule,bg=UI_CARD,fg=UI_MUTED2,size=8).pack(anchor="w",padx=14,pady=(2,8))\n            actions=tk.Frame(card,bg=UI_CARD); actions.pack(fill="x",padx=14,pady=(0,12))\n'''
-NEW_CARD = '''            card, card_body = self._make_card(body, padx=14, pady=12)\n            card.grid(row=i//2, column=i%2, sticky="nsew", padx=(0,7) if i%2==0 else (7,0), pady=7)\n            top=tk.Frame(card_body,bg=UI_CARD); top.pack(fill="x", pady=(0,5))\n            self._label(top,name,bg=UI_CARD,size=11,weight="bold").pack(side="left")\n            self._label(top,textvariable=self._daily_var(name,"READY" if name!="Idle Rewards" else "NEEDS ROUTE"),bg=UI_CARD,fg=UI_GREEN if name!="Idle Rewards" else UI_AMBER,size=8,weight="bold").pack(side="right")\n            self._label(card_body,desc,bg=UI_CARD,fg=UI_MUTED,size=8).pack(anchor="w")\n            self._label(card_body,rule,bg=UI_CARD,fg=UI_MUTED_2,size=8).pack(anchor="w",pady=(2,8))\n            actions=tk.Frame(card_body,bg=UI_CARD); actions.pack(fill="x")\n'''
+NEW_HOME = '''    def _daily_ensure_home(self):\n        # V7.0.2 safety rule: Daily modules NEVER send Android Back to find Home.\n        # In TG:BTC, Back from Home opens/exits the game, so navigation-to-Home\n        # must be user-controlled. We only verify the current screen here.\n        if self.daily_stop_event.is_set():\n            return False\n        try:\n            ref = self._phone_reference_screenshot()\n            return self._daily_home_signature(ref)\n        except Exception:\n            return False\n'''
 
-def find_base(target):
+OLD_ERROR = 'raise RuntimeError("Could not verify HOME screen. Open Home manually and retry.")'
+NEW_ERROR = 'raise RuntimeError("Not on HOME. Open the game Home screen manually, then press START again. Daily Assistant will never press Android Back automatically.")'
+
+def find_base():
     appdata = Path(os.environ.get("APPDATA", Path.home())) / "TG-BTC-Arena-Companion" / "update_backups"
     candidates = []
     if appdata.exists():
-        for p in appdata.glob("before_7.0.0_*/tg_arena_bot.py"):
+        for p in appdata.glob("before_7.0.1_*/tg_arena_bot.py"):
             candidates.append(p)
         for p in appdata.glob("**/tg_arena_bot.py"):
             if p not in candidates:
@@ -25,23 +26,21 @@ def find_base(target):
     for p in candidates:
         try:
             s = p.read_text(encoding="utf-8")
-            if OLD_VERSION in s and "def open_daily_assistant" in s:
+            if OLD_VERSION in s and OLD_HOME in s:
                 return s
         except Exception:
             pass
-    raise RuntimeError("Could not locate the backed-up v7.0.0 source. Use the 7.0.1 standalone package instead.")
-
+    raise RuntimeError("Could not locate the backed-up v7.0.1 source. Use the 7.0.2 standalone package instead.")
 
 def main():
     target = Path(__file__).resolve()
-    s = find_base(target)
-    if OLD_SAFE not in s or OLD_CARD not in s:
-        raise RuntimeError("v7.0.1 patch markers not found in the v7.0.0 source")
+    s = find_base()
+    if OLD_HOME not in s:
+        raise RuntimeError("v7.0.2 Home Guard patch marker not found")
     s = s.replace(OLD_VERSION, NEW_VERSION, 1)
-    s = s.replace(OLD_SAFE, NEW_SAFE, 1)
-    s = s.replace(OLD_CARD, NEW_CARD, 1)
-    s = s.replace("UI_MUTED2", "UI_MUTED_2")
-    tmp = target.with_suffix(target.suffix + ".v701.tmp")
+    s = s.replace(OLD_HOME, NEW_HOME, 1)
+    s = s.replace(OLD_ERROR, NEW_ERROR, 1)
+    tmp = target.with_suffix(target.suffix + ".v702.tmp")
     tmp.write_text(s, encoding="utf-8")
     os.replace(tmp, target)
     flags = 0x08000000 if os.name == "nt" else 0
