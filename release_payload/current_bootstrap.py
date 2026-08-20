@@ -1,51 +1,51 @@
-# TG:BTC Game Assistant v7.0 delta bootstrap
-# Applies the v6.0 -> v7.0 Daily Modules update from the updater backup.
-import base64, gzip, hashlib, json, os, subprocess, sys
+# TG:BTC Game Assistant v7.0.1 Daily Assistant UI hotfix bootstrap
+import os, subprocess, sys
 from pathlib import Path
-APP_VERSION = "7.0.0"
-_BASE_SHA256 = "71f8740396ed976295887e0fbdcb2483b42736850ca6589f75d22ebe5bb4fe05"
-_TARGET_SHA256 = "0eae2d90b16068d66db73ec298f1625c67176775a27808db2519d3241f96f4e4"
-_OPS = """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"""
 
-def _find_base():
-    profile=Path(os.environ.get("APPDATA", str(Path(__file__).resolve().parent))) / "TG-BTC-Arena-Companion" / "update_backups"
-    if profile.exists():
-        candidates=sorted(profile.glob("before_*"), key=lambda p:p.stat().st_mtime, reverse=True)
-        for folder in candidates:
-            p=folder/"tg_arena_bot.py"
-            try:
-                data=p.read_bytes()
-                if hashlib.sha256(data).hexdigest()==_BASE_SHA256:
-                    return p,data
-            except Exception:
-                pass
-    here=Path(__file__).resolve().parent
-    for p in here.parent.rglob("tg_arena_bot.py"):
+APP_VERSION = "7.0.1"
+OLD_VERSION = 'APP_VERSION = "7.0.0"'
+NEW_VERSION = 'APP_VERSION = "7.0.1"'
+
+OLD_SAFE = '''        safe = self._make_card(page)\n        safe.pack(fill="x", padx=26, pady=(0, 12))\n        safe_inner = tk.Frame(safe, bg=UI_CARD)\n        safe_inner.pack(fill="x", padx=16, pady=14)\n'''
+NEW_SAFE = '''        safe, safe_inner = self._make_card(page, padx=16, pady=14)\n        safe.pack(fill="x", padx=26, pady=(0, 12))\n'''
+
+OLD_CARD = '''            card=self._make_card(body)\n            card.grid(row=i//2, column=i%2, sticky="nsew", padx=(0,7) if i%2==0 else (7,0), pady=7)\n            top=tk.Frame(card,bg=UI_CARD); top.pack(fill="x", padx=14, pady=(12,5))\n            self._label(top,name,bg=UI_CARD,size=11,weight="bold").pack(side="left")\n            self._label(top,textvariable=self._daily_var(name,"READY" if name!="Idle Rewards" else "NEEDS ROUTE"),bg=UI_CARD,fg=UI_GREEN if name!="Idle Rewards" else UI_AMBER,size=8,weight="bold").pack(side="right")\n            self._label(card,desc,bg=UI_CARD,fg=UI_MUTED,size=8).pack(anchor="w",padx=14)\n            self._label(card,rule,bg=UI_CARD,fg=UI_MUTED2,size=8).pack(anchor="w",padx=14,pady=(2,8))\n            actions=tk.Frame(card,bg=UI_CARD); actions.pack(fill="x",padx=14,pady=(0,12))\n'''
+NEW_CARD = '''            card, card_body = self._make_card(body, padx=14, pady=12)\n            card.grid(row=i//2, column=i%2, sticky="nsew", padx=(0,7) if i%2==0 else (7,0), pady=7)\n            top=tk.Frame(card_body,bg=UI_CARD); top.pack(fill="x", pady=(0,5))\n            self._label(top,name,bg=UI_CARD,size=11,weight="bold").pack(side="left")\n            self._label(top,textvariable=self._daily_var(name,"READY" if name!="Idle Rewards" else "NEEDS ROUTE"),bg=UI_CARD,fg=UI_GREEN if name!="Idle Rewards" else UI_AMBER,size=8,weight="bold").pack(side="right")\n            self._label(card_body,desc,bg=UI_CARD,fg=UI_MUTED,size=8).pack(anchor="w")\n            self._label(card_body,rule,bg=UI_CARD,fg=UI_MUTED_2,size=8).pack(anchor="w",pady=(2,8))\n            actions=tk.Frame(card_body,bg=UI_CARD); actions.pack(fill="x")\n'''
+
+def find_base(target):
+    appdata = Path(os.environ.get("APPDATA", Path.home())) / "TG-BTC-Arena-Companion" / "update_backups"
+    candidates = []
+    if appdata.exists():
+        for p in appdata.glob("before_7.0.0_*/tg_arena_bot.py"):
+            candidates.append(p)
+        for p in appdata.glob("**/tg_arena_bot.py"):
+            if p not in candidates:
+                candidates.append(p)
+    candidates.sort(key=lambda p: p.stat().st_mtime if p.exists() else 0, reverse=True)
+    for p in candidates:
         try:
-            if p.resolve()==Path(__file__).resolve():
-                continue
-            data=p.read_bytes()
-            if hashlib.sha256(data).hexdigest()==_BASE_SHA256:
-                return p,data
+            s = p.read_text(encoding="utf-8")
+            if OLD_VERSION in s and "def open_daily_assistant" in s:
+                return s
         except Exception:
             pass
-    raise RuntimeError("v7.0 updater could not find the v6.0 source backup. Use the standalone v7 package once.")
+    raise RuntimeError("Could not locate the backed-up v7.0.0 source. Use the 7.0.1 standalone package instead.")
+
 
 def main():
-    target=Path(__file__).resolve()
-    _,base_bytes=_find_base()
-    lines=base_bytes.decode("utf-8").splitlines(keepends=True)
-    ops=json.loads(gzip.decompress(base64.b64decode(_OPS)).decode("utf-8"))
-    for i1,i2,replacement in reversed(ops):
-        lines[int(i1):int(i2)] = [replacement] if replacement else []
-    data="".join(lines).encode("utf-8")
-    if hashlib.sha256(data).hexdigest()!=_TARGET_SHA256:
-        raise RuntimeError("v7.0 patched source checksum mismatch")
-    tmp=target.with_suffix(target.suffix+".v70.tmp")
-    tmp.write_bytes(data)
-    os.replace(tmp,target)
-    flags=0x08000000 if os.name=="nt" else 0
-    subprocess.Popen([sys.executable,str(target)],cwd=str(target.parent),creationflags=flags)
+    target = Path(__file__).resolve()
+    s = find_base(target)
+    if OLD_SAFE not in s or OLD_CARD not in s:
+        raise RuntimeError("v7.0.1 patch markers not found in the v7.0.0 source")
+    s = s.replace(OLD_VERSION, NEW_VERSION, 1)
+    s = s.replace(OLD_SAFE, NEW_SAFE, 1)
+    s = s.replace(OLD_CARD, NEW_CARD, 1)
+    s = s.replace("UI_MUTED2", "UI_MUTED_2")
+    tmp = target.with_suffix(target.suffix + ".v701.tmp")
+    tmp.write_text(s, encoding="utf-8")
+    os.replace(tmp, target)
+    flags = 0x08000000 if os.name == "nt" else 0
+    subprocess.Popen([sys.executable, str(target)], cwd=str(target.parent), creationflags=flags)
 
-if __name__=="__main__":
+if __name__ == "__main__":
     main()

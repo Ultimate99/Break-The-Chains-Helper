@@ -1,25 +1,11 @@
-# TG:BTC Game Assistant 7.0.0 — Modular Daily Assistant
+# TG:BTC Game Assistant 7.0.1 — Daily Assistant UI Fix
 
-V7.0 begins the transition from Arena-only automation to a full-game assistant.
+Hotfix for the blank Daily Assistant page introduced in 7.0.0.
 
-## Daily Assistant
-- New first-class **Daily Assistant** page.
-- Separate modules: **Mail, Events, Shop, Recruit, Quest Pass, Idle Rewards, Current Screen**.
-- Each module has its own **START** button instead of one giant routine.
-- Routes can be re-taught with **TEACH** if the game UI changes.
+## Fixed
+- Daily Assistant cards now render correctly.
+- Corrected misuse of `_make_card()`, which returns `(card, body)` rather than a single widget.
+- Corrected `UI_MUTED2` typo to the existing `UI_MUTED_2` palette constant.
+- Verified all seven Daily modules are created: Mail, Events, Shop, Recruit, Quest Pass, Idle Rewards, and Current Screen.
 
-## Safe Collector Engine
-- OCR-driven actions for literal **CLAIM ALL**, **CLAIM**, and **FREE** labels only.
-- Module-specific allowlists: Recruit uses FREE only; Mail/Quest Pass use claims only.
-- Rejects large marketing-title text such as FREE in a banner/title.
-- Automatically dismisses **Rewards Obtained** overlays.
-- Every automatic tap is written to the existing Activity log.
-
-## Spending Guardrails
-The Daily Assistant never blind-clicks BUY, EXCHANGE, USE, SWEEP, START, GO NOW, premium currency, tickets, or other cost-bearing actions. Unknown/unfinished actions are left for later gameplay modules.
-
-## Recorded Tap Routes
-The included default Home routes for Mail, Events, Shop, Recruit and Quest Pass are normalized from the user's recorded tap flows. Idle Rewards intentionally starts as **NEEDS ROUTE** until a clean route is taught.
-
-## Compatibility
-Existing Arena automation, Fast Vision, OCR, Smart Dodge, Opponent Intelligence, Strategy Engine, History, self-healing, custom dark chrome, AppData profile, and updater are preserved.
+No daily-route logic or Arena/Intelligence/Strategy behavior was changed in this hotfix.
