@@ -7,7 +7,7 @@ on:
     paths:
       - "VERSION"
       - "RELEASE_NOTES.md"
-      - "release_payload/current_parts/**"
+      - "release_payload/current_bootstrap.py"
       - ".github/workflows/release.yml"
   workflow_dispatch:
 
@@ -32,7 +32,7 @@ jobs:
           ZIP="TG_BTC_Arena_Companion_v${VERSION}.zip"
 
           mkdir -p "$PAYLOAD_DIR"
-          cat release_payload/current_parts/part*.txt > "$PAYLOAD_DIR/tg_arena_bot.py"
+          cp release_payload/current_bootstrap.py "$PAYLOAD_DIR/tg_arena_bot.py"
 
           python -m py_compile "$PAYLOAD_DIR/tg_arena_bot.py"
           grep -F "APP_VERSION = \"${VERSION}\"" "$PAYLOAD_DIR/tg_arena_bot.py"
