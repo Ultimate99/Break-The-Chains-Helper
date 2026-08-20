@@ -1,0 +1,54 @@
+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"""
+
+def sha256(path):
+    try:
+        return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    except Exception:
+        return ""
+
+def locate_base(target):
+    appdata = Path(os.environ.get("APPDATA", str(target.parent)))
+    profile = appdata / "TG-BTC-Arena-Companion"
+    candidates = []
+    backup_root = profile / "update_backups"
+    if backup_root.exists():
+        candidates.extend(backup_root.glob("before_*/*tg_arena_bot.py"))
+        candidates.extend(backup_root.rglob("tg_arena_bot.py"))
+    candidates.extend(target.parent.glob("tg_arena_bot_before_*.py"))
+    seen = set()
+    for path in sorted(candidates, key=lambda p: p.stat().st_mtime if p.exists() else 0, reverse=True):
+        key = str(path)
+        if key in seen:
+            continue
+        seen.add(key)
+        if sha256(path) == _BASE_SHA256:
+            return path
+    return None
+
+def apply_patch(base_text):
+    lines = base_text.splitlines(keepends=True)
+    ops = json.loads(gzip.decompress(base64.b64decode(_PATCH.encode("ascii"))).decode("utf-8"))
+    for i1, i2, replacement in reversed(ops):
+        lines[int(i1):int(i2)] = str(replacement).splitlines(keepends=True)
+    return "".join(lines)
+
+def main():
+    target = Path(__file__).resolve()
+    base = locate_base(target)
+    if base is None:
+        raise RuntimeError("v6.0 could not find the verified v5.8 updater backup. Use the standalone v6.0 package once, then future updates continue normally.")
+    patched = apply_patch(base.read_text(encoding="utf-8"))
+    raw = patched.encode("utf-8")
+    if hashlib.sha256(raw).hexdigest() != _TARGET_SHA256:
+        raise RuntimeError("v6.0 patched source checksum mismatch")
+    compile(patched, str(target), "exec")
+    tmp = target.with_suffix(".v60.tmp")
+    tmp.write_bytes(raw)
+    os.replace(tmp, target)
+    kwargs = {"cwd": str(target.parent)}
+    if os.name == "nt":
+        kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
+    subprocess.Popen([sys.executable, str(target)], **kwargs)
+
+if __name__ == "__main__":
+    main()
