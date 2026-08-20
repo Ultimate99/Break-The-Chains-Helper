@@ -1,0 +1,68 @@
+name: Publish Arena Companion
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "VERSION"
+      - "release_payload/v5_5_parts/**"
+      - ".github/workflows/release.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build update ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          TAG="$VERSION"
+          PAYLOAD_DIR="dist/TG_BTC_Arena_Companion_v${VERSION}"
+          ZIP="TG_BTC_Arena_Companion_v${VERSION}.zip"
+
+          mkdir -p "$PAYLOAD_DIR"
+          cat release_payload/v5_5_parts/part*.txt > "$PAYLOAD_DIR/tg_arena_bot.py"
+
+          # Validate the bootstrap that the installed updater will execute.
+          python -m py_compile "$PAYLOAD_DIR/tg_arena_bot.py"
+
+          # Make sure the expected embedded version is present before publishing.
+          grep -F "APP_VERSION = \"${VERSION}\"" "$PAYLOAD_DIR/tg_arena_bot.py"
+
+          (
+            cd dist
+            zip -qr "../$ZIP" "TG_BTC_Arena_Companion_v${VERSION}"
+          )
+
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          echo "ZIP=$ZIP" >> "$GITHUB_ENV"
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          NOTES="v${VERSION} — Figma dashboard UI. Adds the dark Arena Dashboard, sidebar navigation, Live/Rank/Session cards, Smart Dodge controls, performance tiles, Activity stream, History/Diagnostics panels, Master V progress, and the update notification badge while retaining the existing grind engine, Fast Vision, OCR, Wireless ADB, persistent profile, and updater."
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$ZIP" --clobber
+            gh release edit "$TAG" --title "TG:BTC Arena Companion $VERSION" --notes "$NOTES"
+          else
+            gh release create "$TAG" "$ZIP" \
+              --title "TG:BTC Arena Companion $VERSION" \
+              --notes "$NOTES" \
+              --target main
+          fi
