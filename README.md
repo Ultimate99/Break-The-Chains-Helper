@@ -1,20 +1,18 @@
 # Break The Chains Helper
 
-TG:BTC Arena Companion for automating Real-Time Arena navigation, Fast Vision, OCR rank/points tracking, and optional Smart Dodge rules.
+TG:BTC Arena Companion helper project.
 
-## Update source
+This repository is the GitHub Releases update source for the desktop Arena Companion.
 
-The desktop app uses this repository as its built-in update source.
+## In-app updater
 
-Current configured source:
+The Companion checks this repository for the latest published GitHub Release.
 
-`Ultimate99/Break-The-Chains-Helper`
+Starting with the cleaned update UI:
+- A compact update icon lives in the top-right app bar.
+- Normal / up-to-date state stays neutral.
+- When a newer release exists, the icon changes to the update state and shows a small `1` badge.
+- Clicking the icon opens the available release and Update action.
+- Update source/debug controls are kept out of the main action row to keep the UI clean.
 
-## Publishing an update
-
-1. Build the new Companion ZIP.
-2. Create a GitHub Release tagged with the app version, for example `v5.3.1`.
-3. Attach the Companion `.zip` file to the Release.
-4. The installed app can then detect it through **CHECK UPDATE** and install it while preserving the permanent profile in `%APPDATA%\TG-BTC-Arena-Companion`.
-
-User settings, Owl samples, Smart Dodge calibration, logs, and session history are intentionally stored outside the version folder.
+User calibration, Owl samples, Smart Dodge settings, and session history live in `%APPDATA%\\TG-BTC-Arena-Companion` and are preserved across updates.
