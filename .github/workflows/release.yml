@@ -6,7 +6,8 @@ on:
       - main
     paths:
       - "VERSION"
-      - "release_payload/v5_5_parts/**"
+      - "RELEASE_NOTES.md"
+      - "release_payload/current_parts/**"
       - ".github/workflows/release.yml"
   workflow_dispatch:
 
@@ -31,12 +32,9 @@ jobs:
           ZIP="TG_BTC_Arena_Companion_v${VERSION}.zip"
 
           mkdir -p "$PAYLOAD_DIR"
-          cat release_payload/v5_5_parts/part*.txt > "$PAYLOAD_DIR/tg_arena_bot.py"
+          cat release_payload/current_parts/part*.txt > "$PAYLOAD_DIR/tg_arena_bot.py"
 
-          # Validate the bootstrap that the installed updater will execute.
           python -m py_compile "$PAYLOAD_DIR/tg_arena_bot.py"
-
-          # Make sure the expected embedded version is present before publishing.
           grep -F "APP_VERSION = \"${VERSION}\"" "$PAYLOAD_DIR/tg_arena_bot.py"
 
           (
@@ -54,8 +52,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
-          NOTES="v${VERSION} — Figma dashboard UI. Adds the dark Arena Dashboard, sidebar navigation, Live/Rank/Session cards, Smart Dodge controls, performance tiles, Activity stream, History/Diagnostics panels, Master V progress, and the update notification badge while retaining the existing grind engine, Fast Vision, OCR, Wireless ADB, persistent profile, and updater."
+          NOTES="$(cat RELEASE_NOTES.md)"
 
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "$ZIP" --clobber

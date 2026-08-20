@@ -1,0 +1,5 @@
+NO_WINDOW", 0x08000000)
+    subprocess.Popen([sys.executable, str(target)], **kwargs)
+
+if __name__ == "__main__":
+    main()
