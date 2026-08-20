@@ -1,19 +1,43 @@
-# TG:BTC Arena Companion 5.8.0 — Diagnostics + Self-Healing
+# TG:BTC Arena Companion 6.0.0 — Arena Intelligence Suite
 
-V5.8 hardens unattended Arena grinding with a live health system and safe automatic recovery.
+V6.0 combines the planned 5.9 Opponent Intelligence upgrade with the first Battle Strategy Engine.
 
-## New
-- Dark in-app **System Diagnostics** page.
-- Dashboard **SYSTEM HEALTHY / NEEDS ATTENTION / SYSTEM ISSUE** indicator.
-- Automatic ADB health probes and reconnect after repeated failures.
-- Fast Vision stale-frame watchdog with automatic stream restart.
-- Persistent ADB tap-shell monitoring and restart.
-- OCR worker health + stale-worker gate recovery.
-- Low-frequency template diagnostics when MATCHING / LOADING stays unresolved too long.
-- Annotated low-confidence debug frames saved to `%APPDATA%\TG-BTC-Arena-Companion\health_debug` (capped at 20).
-- Persistent health/recovery log in `%APPDATA%\TG-BTC-Arena-Companion\health_events.jsonl`.
-- Smart Dodge readiness now validates Owl samples + Quit/Confirm calibration. Missing calibration safely blocks surrender logic.
-- Manual safe recovery actions: Reconnect ADB, Restart Vision, Restart Tap Shell.
-- Automatic recovery counter and last-recovery summary.
+## Opponent Scanner
+- Add samples for any enemy hero from the new **Intelligence** page.
+- Existing Owl Smart Dodge samples are reused automatically.
+- Multi-sample hero recognition with configurable threat weights.
+- Separate opponent username OCR calibration.
 
-V5.8 repairs transport/stream/worker failures automatically, but deliberately **does not make blind game taps** when recognition is uncertain. Existing Fast Vision, Smart Dodge, Bot/Real detection, History/Opponent Intelligence, OCR, custom dark chrome, permanent profile and updater are preserved.
+## Decision Engine + Threat Score
+- Fuses Organization Bot/Real detection with queue-model confidence.
+- LOW / MEDIUM / HIGH / NIGHTMARE threat rating.
+- Uses opponent identity, detected heroes, queue class, repeated-opponent memory and historical matchup results.
+- Presets: **Safe Climb**, **Maximum Matches**, **Master Push**, **No Dodge**.
+- Custom DODGE/PLAY rules can require identity, hero combinations and minimum threat.
+
+## Opponent Memory + Live Battle HUD
+- Remembers repeated usernames and their W/L/dodge history.
+- Dashboard now shows identity confidence, username, recognized heroes, threat and current decision during battle.
+
+## Replay / Result Analysis
+- Stores up to 100 opening battle snapshots in AppData.
+- Double-click a History row to open its snapshot.
+- History now records opponent username, hero composition, threat, decision, profile and battle strategy.
+- Learns worst-performing heroes and enemy combinations from played results.
+
+## Profiles, Goals + Notifications
+- Strategy page can switch decision profiles instantly.
+- Session goals: target Points, Matches or Net Points.
+- Windows notifications for Master V, goal completion, Arena closing soon and critical system-health issues.
+
+## Battle Strategy Engine V1
+- Disabled by default until explicitly enabled.
+- Calibrate named in-battle action coordinates.
+- Build timed steps with optional REAL/BOT, required-hero and minimum-threat conditions.
+- Can run alongside game AUTO or with AUTO suppressed.
+- Missing/unrecognized action coordinates are skipped and logged — never guessed.
+
+## Diagnostics integration
+- Diagnostics now also reports Opponent Intelligence and Strategy readiness.
+
+Existing Fast Vision, Wireless ADB, OCR, Smart Dodge, custom dark chrome, persistent history/profile data, self-healing and GitHub updater are preserved.
