@@ -1,12 +1,21 @@
-# TG:BTC Game Assistant 7.0.6 — Daily Tap Scaling Fix
+# TG:BTC Game Assistant 7.0.7 — Daily Debug & Calibration
 
-Fixes Daily Assistant modules appearing to run while not actually pressing the intended game controls.
+Field-debug release for the modular Daily Assistant.
 
-## Fixed
-- Daily Assistant now synchronizes the phone's real screen size before its first navigation tap.
-- Normalized 1536x709 route and OCR coordinates are correctly mapped back to the physical phone resolution (for example 2340x1080).
-- Phone screenshot capture now refreshes `actual_w` / `actual_h`, keeping later OCR taps correctly scaled too.
-- Empty Daily scans now stop after two confirmed empty frames instead of seven, removing the ~30+ second apparent hang when no safe action exists.
-- Existing v7.0.5 thread-safety, stale-ADB, route-teaching and page-reopen fixes are preserved.
+## Added
+- `DRY RUN` button on every Daily module. It never sends phone taps.
+- Current Screen DRY RUN highlights any detected safe `CLAIM / CLAIM ALL / FREE` actions.
+- Per-module `STOP` buttons.
+- 120-second module watchdog so a Daily task cannot stay RUNNING forever.
+- Live debug line showing physical phone resolution and reference-to-phone coordinate mapping.
+- Route debugger: DRY RUN logs every stored route point as `reference -> physical phone` coordinates.
+- Before/after screenshots for route taps and safe-action taps.
+- `OPEN DEBUG FOLDER` shortcut. Captures are stored under `%APPDATA%\TG-BTC-Arena-Companion\daily_debug`.
 
-Safe-action policy remains unchanged: only explicit CLAIM / CLAIM ALL / FREE actions are automated by the Daily collector.
+## Preserved
+- v7.0.6 physical tap-scaling fix.
+- v7.0.5 Tk thread-safety and stale Wireless ADB fixes.
+- Daily Assistant never sends Android BACK automatically.
+- SAFE MODE still only automates explicit `CLAIM`, `CLAIM ALL`, and `FREE` actions; it does not intentionally spend premium currency or tickets.
+
+This build is intentionally more verbose/slower during normal Daily runs because it captures evidence around each automated tap so remaining route or recognition issues can be diagnosed from actual frames instead of guessing.
