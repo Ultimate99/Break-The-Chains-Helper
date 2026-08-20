@@ -1,17 +1,19 @@
-# TG:BTC Arena Companion 5.7.1 — Bot Identity + Smart Dodge Toggle
+# TG:BTC Arena Companion 5.8.0 — Diagnostics + Self-Healing
 
-TG:BTC Arena Companion v5.7.1 — Bot Identity + Smart Dodge Master Toggle
+V5.8 hardens unattended Arena grinding with a live health system and safe automatic recovery.
 
-New opponent identity rule:
-- No Organization under opponent username = BOT.
-- Organization present = REAL PERSON.
-- One-time Organization-line ROI calibration is stored in AppData.
-- Detection runs asynchronously and never blocks AUTO / Smart Dodge recognition.
-- History now records opponent TYPE (REAL/BOT) alongside the existing queue-strength model.
+## New
+- Dark in-app **System Diagnostics** page.
+- Dashboard **SYSTEM HEALTHY / NEEDS ATTENTION / SYSTEM ISSUE** indicator.
+- Automatic ADB health probes and reconnect after repeated failures.
+- Fast Vision stale-frame watchdog with automatic stream restart.
+- Persistent ADB tap-shell monitoring and restart.
+- OCR worker health + stale-worker gate recovery.
+- Low-frequency template diagnostics when MATCHING / LOADING stays unresolved too long.
+- Annotated low-confidence debug frames saved to `%APPDATA%\TG-BTC-Arena-Companion\health_debug` (capped at 20).
+- Persistent health/recovery log in `%APPDATA%\TG-BTC-Arena-Companion\health_events.jsonl`.
+- Smart Dodge readiness now validates Owl samples + Quit/Confirm calibration. Missing calibration safely blocks surrender logic.
+- Manual safe recovery actions: Reconnect ADB, Restart Vision, Restart Tap Shell.
+- Automatic recovery counter and last-recovery summary.
 
-Smart Dodge UX fix:
-- The master Smart Dodge toggle is visible again in the dashboard header.
-- The calibration window also exposes Enable Smart Dodge.
-- The ACTIVE/OFF badge updates immediately when the master switch changes.
-
-Existing Fast Vision, Wireless ADB, Owl detection, OCR, custom dark window chrome, persistent history, and updater are preserved.
+V5.8 repairs transport/stream/worker failures automatically, but deliberately **does not make blind game taps** when recognition is uncertain. Existing Fast Vision, Smart Dodge, Bot/Real detection, History/Opponent Intelligence, OCR, custom dark chrome, permanent profile and updater are preserved.
