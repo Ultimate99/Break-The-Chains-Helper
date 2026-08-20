@@ -1,18 +1,12 @@
-# TG:BTC Game Assistant 7.0.5 — Stability Audit
+# TG:BTC Game Assistant 7.0.6 — Daily Tap Scaling Fix
 
-Proactive stability pass after the first V7 Daily Assistant field tests.
+Fixes Daily Assistant modules appearing to run while not actually pressing the intended game controls.
 
 ## Fixed
-- Daily worker threads no longer update Tk `StringVar` objects directly; status updates are marshalled back to the UI thread.
-- Reopening Daily Assistant no longer replaces live module status variables.
-- Daily route teaching no longer blocks/freezes the GUI for one second between route taps.
-- Daily modules refresh the active ADB device every run instead of potentially retaining a stale Wireless ADB serial/session.
-- Safe Daily scanning now waits longer through slow page transitions before concluding that no claimable action exists.
-- Added a final navigation settle delay before Daily OCR starts.
+- Daily Assistant now synchronizes the phone's real screen size before its first navigation tap.
+- Normalized 1536x709 route and OCR coordinates are correctly mapped back to the physical phone resolution (for example 2340x1080).
+- Phone screenshot capture now refreshes `actual_w` / `actual_h`, keeping later OCR taps correctly scaled too.
+- Empty Daily scans now stop after two confirmed empty frames instead of seven, removing the ~30+ second apparent hang when no safe action exists.
+- Existing v7.0.5 thread-safety, stale-ADB, route-teaching and page-reopen fixes are preserved.
 
-## Verified
-- Python compile check.
-- Headless GUI smoke test for Dashboard/Daily/Intelligence/History/Strategy page switching.
-- Daily status update tested from a background thread while Tk's event loop was active.
-
-Existing Home Guard behavior remains: Daily Assistant never sends Android BACK automatically.
+Safe-action policy remains unchanged: only explicit CLAIM / CLAIM ALL / FREE actions are automated by the Daily collector.
