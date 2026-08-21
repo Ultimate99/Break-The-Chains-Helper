@@ -1,21 +1,27 @@
-# TG:BTC Game Assistant 7.0.7 — Daily Debug & Calibration
+# TG:BTC Game Assistant 7.1.0 — Daily Assistant V1
 
-Field-debug release for the modular Daily Assistant.
+V7.1 turns the V7 Daily test harness into a usable modular daily collector.
 
-## Added
-- `DRY RUN` button on every Daily module. It never sends phone taps.
-- Current Screen DRY RUN highlights any detected safe `CLAIM / CLAIM ALL / FREE` actions.
-- Per-module `STOP` buttons.
-- 120-second module watchdog so a Daily task cannot stay RUNNING forever.
-- Live debug line showing physical phone resolution and reference-to-phone coordinate mapping.
-- Route debugger: DRY RUN logs every stored route point as `reference -> physical phone` coordinates.
-- Before/after screenshots for route taps and safe-action taps.
-- `OPEN DEBUG FOLDER` shortcut. Captures are stored under `%APPDATA%\TG-BTC-Arena-Companion\daily_debug`.
+## New
+- **RUN ALL SAFE** chains the supported daily modules in a conservative order.
+- **Screen verification** before route chaining: Home, Mail, Shop, Recruit, Event, Quest Pass, Chain Campaign, and Idle Farming popup.
+- **Verified Home return** uses the game's visible Home icon. Daily Assistant still never sends Android Back.
+- **Mail** — CLAIM / CLAIM ALL inbox rewards.
+- **Shop** — opens Daily Deal and inspects known Shop tabs; content clicks remain limited to explicit FREE / CLAIM actions.
+- **Recruit** — enters Regular Recruit and only uses an explicit FREE pull. Recruit runs last in RUN ALL so summon/result flow is never guessed through.
+- **Quest Pass** — checks Pass Quest, Daily, Weekly, and Pass Reward pages for claimable rewards.
+- **Events** — collects visible CLAIM / FREE actions from the Event screen.
+- **Idle Rewards** — opens Chain Campaign Idle Farming and claims it. Includes a visual-popup fallback because TG:BTC's stylized Idle Claim label is unreliable in OCR.
+- **Login / Sign-in** — separate teachable module for rotating seasonal sign-in pages.
+- **Run summary + audit log** — records claim actions, free actions, skipped modules, issues, elapsed time, and writes `%APPDATA%\TG-BTC-Arena-Companion\daily_runs.jsonl`.
 
-## Preserved
-- v7.0.6 physical tap-scaling fix.
-- v7.0.5 Tk thread-safety and stale Wireless ADB fixes.
-- Daily Assistant never sends Android BACK automatically.
-- SAFE MODE still only automates explicit `CLAIM`, `CLAIM ALL`, and `FREE` actions; it does not intentionally spend premium currency or tickets.
+## Safety
+- Content targets remain restricted to literal `CLAIM`, `CLAIM ALL`, and `FREE`.
+- Known navigation/tab taps only continue after the expected screen is verified.
+- `BUY`, `EXCHANGE`, `USE`, `SWEEP`, `START`, `GO NOW`, premium-currency purchases, and ticket-cost actions are not content targets.
+- If a route or Home return cannot be verified, RUN ALL SAFE stops instead of guessing.
 
-This build is intentionally more verbose/slower during normal Daily runs because it captures evidence around each automated tap so remaining route or recognition issues can be diagnosed from actual frames instead of guessing.
+## Updater
+- V7.1 returns to a **self-contained full-source update payload**. It no longer depends on finding an exact previous-version backup before installing.
+
+Existing Arena, Smart Dodge, Opponent Intelligence, Strategy, History, Diagnostics, updater profile, and V7.0.7 Daily debug screenshots are preserved.
