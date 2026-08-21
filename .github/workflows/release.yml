@@ -7,7 +7,7 @@ on:
     paths:
       - "VERSION"
       - "RELEASE_NOTES.md"
-      - "release_payload/current_bootstrap.py"
+      - "release_payload/full_source_parts/**"
       - ".github/workflows/release.yml"
   workflow_dispatch:
 
@@ -21,7 +21,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Build update ZIP
+      - name: Build full-source update ZIP
         shell: bash
         run: |
           set -euo pipefail
@@ -32,7 +32,24 @@ jobs:
           ZIP="TG_BTC_Arena_Companion_v${VERSION}.zip"
 
           mkdir -p "$PAYLOAD_DIR"
-          cp release_payload/current_bootstrap.py "$PAYLOAD_DIR/tg_arena_bot.py"
+
+          python - <<'PY'
+          import base64
+          import bz2
+          from pathlib import Path
+
+          version = Path("VERSION").read_text(encoding="utf-8").strip()
+          parts = sorted(Path("release_payload/full_source_parts").glob("part*.txt"))
+          if not parts:
+              raise SystemExit("No full-source payload parts found")
+
+          encoded = "".join(p.read_text(encoding="utf-8").strip() for p in parts)
+          raw = bz2.decompress(base64.b64decode(encoded))
+
+          out = Path("dist") / f"TG_BTC_Arena_Companion_v{version}" / "tg_arena_bot.py"
+          out.write_bytes(raw)
+          print(f"Reconstructed {out} from {len(parts)} parts ({len(raw)} bytes)")
+          PY
 
           python -m py_compile "$PAYLOAD_DIR/tg_arena_bot.py"
           grep -F "APP_VERSION = \"${VERSION}\"" "$PAYLOAD_DIR/tg_arena_bot.py"
