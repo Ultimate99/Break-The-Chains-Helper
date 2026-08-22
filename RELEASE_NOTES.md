@@ -24,3 +24,4 @@ Daily Assistant responsiveness and return-to-Home reliability update.
 
 This release uses a deterministic checksum-verified delta from the exact v7.1.0 full-source build.
 
+Release workflow retriggered through a normal PR merge so the published GitHub Release is visible to the built-in updater.
