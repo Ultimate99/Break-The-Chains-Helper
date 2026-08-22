@@ -1,4 +1,5 @@
 # TG:BTC Game Assistant v7.1.1 deterministic delta updater
+# Release publish trigger: 2026-08-22
 import base64, gzip, hashlib, json, os, subprocess, sys
 from pathlib import Path
 
