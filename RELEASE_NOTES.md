@@ -1,27 +1,25 @@
-# TG:BTC Game Assistant 7.1.0 — Daily Assistant V1
+# TG:BTC Game Assistant 7.1.1 — Fast Daily + Verified Home Retry
 
-V7.1 turns the V7 Daily test harness into a usable modular daily collector.
+Daily Assistant responsiveness and return-to-Home reliability update.
 
-## New
-- **RUN ALL SAFE** chains the supported daily modules in a conservative order.
-- **Screen verification** before route chaining: Home, Mail, Shop, Recruit, Event, Quest Pass, Chain Campaign, and Idle Farming popup.
-- **Verified Home return** uses the game's visible Home icon. Daily Assistant still never sends Android Back.
-- **Mail** — CLAIM / CLAIM ALL inbox rewards.
-- **Shop** — opens Daily Deal and inspects known Shop tabs; content clicks remain limited to explicit FREE / CLAIM actions.
-- **Recruit** — enters Regular Recruit and only uses an explicit FREE pull. Recruit runs last in RUN ALL so summon/result flow is never guessed through.
-- **Quest Pass** — checks Pass Quest, Daily, Weekly, and Pass Reward pages for claimable rewards.
-- **Events** — collects visible CLAIM / FREE actions from the Event screen.
-- **Idle Rewards** — opens Chain Campaign Idle Farming and claims it. Includes a visual-popup fallback because TG:BTC's stylized Idle Claim label is unreliable in OCR.
-- **Login / Sign-in** — separate teachable module for rotating seasonal sign-in pages.
-- **Run summary + audit log** — records claim actions, free actions, skipped modules, issues, elapsed time, and writes `%APPDATA%\TG-BTC-Arena-Companion\daily_runs.jsonl`.
+## Faster Daily actions
+- Daily Assistant now starts its own low-latency Fast Vision stream while Arena grinding is stopped.
+- Uses a persistent ADB tap shell for Daily navigation/actions instead of launching a new adb process for each tap.
+- Screen checks use the latest streamed frame when available instead of multi-second raw screencaps.
+- Reduced fixed post-tap waits; route/screen verification still guards transitions.
+- Automatically falls back to normal screencap/process taps if Fast Vision or the persistent shell is unavailable.
+- Daily-only transport is stopped before Arena starts, so the Arena engine remains isolated.
 
-## Safety
-- Content targets remain restricted to literal `CLAIM`, `CLAIM ALL`, and `FREE`.
-- Known navigation/tab taps only continue after the expected screen is verified.
-- `BUY`, `EXCHANGE`, `USE`, `SWEEP`, `START`, `GO NOW`, premium-currency purchases, and ticket-cost actions are not content targets.
-- If a route or Home return cannot be verified, RUN ALL SAFE stops instead of guessing.
+## Home return reliability
+- Returning Home now verifies that the Home screen is actually visible.
+- If Home is not visible after the first Home tap, the assistant repeats the Home action automatically.
+- Up to 4 verified attempts are made before reporting `HOME FAIL`.
+- If Home is already visible, no extra Home tap is sent.
+- Android Back is still never used by Daily Assistant.
 
-## Updater
-- V7.1 returns to a **self-contained full-source update payload**. It no longer depends on finding an exact previous-version backup before installing.
+## Preserved
+- Safe-action policy: only explicit CLAIM / CLAIM ALL / FREE targets.
+- V7.1 screen anchors, Run All Safe, summaries, route teaching, and debug captures.
+- User AppData profile/history/calibrations remain untouched by updates.
 
-Existing Arena, Smart Dodge, Opponent Intelligence, Strategy, History, Diagnostics, updater profile, and V7.0.7 Daily debug screenshots are preserved.
+This release uses a deterministic checksum-verified delta from the exact v7.1.0 full-source build.
