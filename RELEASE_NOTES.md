@@ -23,3 +23,4 @@ Daily Assistant responsiveness and return-to-Home reliability update.
 - User AppData profile/history/calibrations remain untouched by updates.
 
 This release uses a deterministic checksum-verified delta from the exact v7.1.0 full-source build.
+
