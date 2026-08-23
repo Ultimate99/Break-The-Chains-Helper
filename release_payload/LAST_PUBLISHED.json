@@ -1,15 +1,16 @@
 {
-  "version": "7.2.2",
-  "tag": "7.2.2",
-  "release_name": "TG:BTC Game Assistant 7.2.2",
-  "release_url": "https://github.com/Ultimate99/Break-The-Chains-Helper/releases/tag/7.2.2",
-  "published_at": "2026-08-23T13:07:18Z",
-  "verified_at": "2026-08-23T13:07:18.650907+00:00",
+  "version": "7.3.0",
+  "tag": "7.3.0",
+  "release_name": "TG:BTC Game Assistant 7.3.0",
+  "release_url": "https://github.com/Ultimate99/Break-The-Chains-Helper/releases/tag/7.3.0",
+  "published_at": "2026-08-23T21:10:55Z",
+  "verified_at": "2026-08-23T21:10:56.066848+00:00",
   "is_draft": false,
   "is_prerelease": false,
-  "asset_name": "TG_BTC_Arena_Companion_v7.2.2.zip",
-  "asset_bytes": 293191,
-  "asset_url": "https://github.com/Ultimate99/Break-The-Chains-Helper/releases/download/7.2.2/TG_BTC_Arena_Companion_v7.2.2.zip",
-  "source_sha256": "0f20427e63011263cf9c7bacb4d3e604175cd00dac29f218fecda665cc56f289",
-  "source_bytes": 363319
+  "asset_name": "TG_BTC_Arena_Companion_v7.3.0.zip",
+  "asset_bytes": 359595,
+  "asset_url": "https://github.com/Ultimate99/Break-The-Chains-Helper/releases/download/7.3.0/TG_BTC_Arena_Companion_v7.3.0.zip",
+  "source_sha256": "bc95436b0d63e573a6024bfa510a652ea61d9ed1f7c95369e646eb2a9e96ed81",
+  "source_bytes": 448036,
+  "deployment_path": "final-pr-gate"
 }

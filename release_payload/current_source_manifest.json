@@ -1,13 +1,14 @@
 {
-  "version": "7.2.2",
-  "sha256": "0f20427e63011263cf9c7bacb4d3e604175cd00dac29f218fecda665cc56f289",
-  "bytes": 363319,
+  "version": "7.3.0",
+  "sha256": "bc95436b0d63e573a6024bfa510a652ea61d9ed1f7c95369e646eb2a9e96ed81",
+  "bytes": 448036,
   "encoding": "base64+bz2",
   "parts": [
     "current_source_parts/part01.txt",
     "current_source_parts/part02.txt",
     "current_source_parts/part03.txt",
     "current_source_parts/part04.txt",
-    "current_source_parts/part05.txt"
+    "current_source_parts/part05.txt",
+    "current_source_parts/part06.txt"
   ]
 }
