@@ -12,6 +12,7 @@ from arena_v2_patch import apply_arena_v2_patch
 from arena_v2_pilot_patch import apply_arena_v2_pilot_patch
 from daily_v73_patch import apply_daily_v73_patch
 from arena_v2_perception_core import apply_arena_perception_core_patch
+from arena_v2_perception_adaptive import apply_arena_perception_adaptive_patch
 from arena_v2_perception_integration import apply_arena_perception_integration_patch
 from arena_v2_perception_events import apply_arena_perception_events_patch
 from arena_v2_perception_event_cleanup import apply_arena_perception_event_cleanup
@@ -21,7 +22,7 @@ from arena_v2_perception_ui_safety import apply_arena_perception_ui_safety_patch
 BASE_VERSION = "7.2.2"
 TARGET_VERSION = "7.3.0"
 BASE_SHA256 = "0f20427e63011263cf9c7bacb4d3e604175cd00dac29f218fecda665cc56f289"
-# Quality generation 5: learner + Pilot + Daily self-healing + Power/HP/events + guided UI.
+# Quality generation 6: learned Arena + Pilot + Daily self-healing + structured perception.
 
 
 def main():
@@ -65,6 +66,7 @@ def main():
     text = apply_arena_v2_pilot_patch(text)
     text = apply_daily_v73_patch(text)
     text = apply_arena_perception_core_patch(text)
+    text = apply_arena_perception_adaptive_patch(text)
     text = apply_arena_perception_integration_patch(text)
     text = apply_arena_perception_events_patch(text)
     text = apply_arena_perception_event_cleanup(text)
