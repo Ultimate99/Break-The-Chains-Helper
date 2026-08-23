@@ -1,0 +1,79 @@
+name: Validate V7.3 Perception UI
+
+on:
+  push:
+    branches: [arena-v2]
+    paths:
+      - ".github/workflows/v73_perception_ui_validate.yml"
+      - "release_payload/build_release_v730.py"
+      - "release_payload/arena_v2_perception_ui.py"
+      - "release_payload/arena_v2_perception_ui_safety.py"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: arena-v2
+      - name: Build, compile and inspect UI AST
+        env:
+          TG_SKIP_MANIFEST_PUBLISH: "1"
+        run: |
+          set -euo pipefail
+          python release_payload/build_release_v730.py --repo-root . --version 7.3.0 --output /tmp/v73.py
+          python -m py_compile /tmp/v73.py
+          python - <<'PY'
+          import ast, hashlib, json
+          from pathlib import Path
+          p=Path('/tmp/v73.py'); text=p.read_text(encoding='utf-8'); tree=ast.parse(text)
+          checks={
+            'ui_marker': text.count('V7.3 Arena Perception UI — guided Power/HP/event calibration build marker')==1,
+            'history_entry': '"PERCEPTION", self.open_arena_perception' in text,
+            'page_method': 'def open_arena_perception(self):' in text,
+            'power_calibration': 'def capture_opponent_power_roi(self):' in text,
+            'hp_calibration': 'def capture_battle_hp_rois(self):' in text,
+            'move_calibration': 'def capture_opponent_move_roi(self):' in text,
+            'test_method': 'def test_arena_perception(self):' in text,
+            'label_method': 'def label_arena_event(self):' in text,
+            'roi_minimums': 'min_width=20, min_height=20' in text and 'min_width=28, min_height=5' in text,
+            'six_hp_sequence': all(x in text for x in ['("ALLY 1", "ally")','("ALLY 2", "ally")','("ALLY 3", "ally")','("ENEMY 1", "enemy")','("ENEMY 2", "enemy")','("ENEMY 3", "enemy")']),
+            'confidence_none_safe': 'conf_text = f"{conf:.0f}%" if conf is not None else "UNKNOWN"' in text,
+            'explicit_verified_label': 'Enter the name ONLY if you verified what {cluster_id} represents.' in text,
+            'unknown_remains_unlabeled': 'Unknown animations stay EVT-xxxx until you verify and label them.' in text,
+            'running_calibration_blocked': text.count('if self.engine.running:') >= 6,
+          }
+          targets={'capture_opponent_power_roi','capture_battle_hp_rois','capture_opponent_move_roi','test_arena_perception','label_arena_event'}
+          methods={}
+          for node in ast.walk(tree):
+            if isinstance(node,ast.FunctionDef) and node.name in targets:
+              methods[node.name]=node
+          checks['all_methods_found']=set(methods)==targets
+          # Calibration and inspection must never tap the phone.
+          no_tap=True
+          for name,node in methods.items():
+            for sub in ast.walk(node):
+              if isinstance(sub,ast.Call):
+                fn=sub.func
+                attr=fn.attr if isinstance(fn,ast.Attribute) else (fn.id if isinstance(fn,ast.Name) else '')
+                if attr in {'_tap_reference','_daily_tap_reference','tap_reference'}:
+                  no_tap=False
+          checks['perception_ui_never_taps']=no_tap
+          # Labeling may only mutate the label/labeled_at fields in event node.
+          label_src=ast.get_source_segment(text,methods['label_arena_event']) or ''
+          checks['label_does_not_change_signature']='["signature"]' not in label_src and '["wins"]' not in label_src and '["losses"]' not in label_src
+          passed=all(checks.values())
+          receipt={'version':'7.3.0-dev-perception-ui','passed':passed,'source_sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'source_bytes':p.stat().st_size,'checks':checks}
+          Path('release_payload/V73_PERCEPTION_UI_VALIDATION.json').write_text(json.dumps(receipt,indent=2)+'\n',encoding='utf-8')
+          if not passed:
+            raise SystemExit(json.dumps(checks,indent=2))
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add release_payload/V73_PERCEPTION_UI_VALIDATION.json
+          git commit -m "Record V7.3 Perception UI validation [skip ci]" || true
+          git push origin HEAD:arena-v2 || true
