@@ -1,52 +1,66 @@
-# TG:BTC Game Assistant v7.1.1 deterministic delta updater
-# Release publish trigger: 2026-08-22
+# TG:BTC Game Assistant v7.1.2 deterministic updater
 import base64, gzip, hashlib, json, os, subprocess, sys
 from pathlib import Path
 
-APP_VERSION = "7.1.1"
+APP_VERSION = "7.1.2"
 BASE_VERSION = "7.1.0"
 BASE_SHA256 = "8e26dd96da5b231432cd0f6c4090aa8c2ad832584557a5637e63d7428a6ba6c1"
-NEW_SHA256 = "8abfac7af8d131963cc9b9b495f554ac58f4e096e630cf0ccaeb5bd6a45c2232"
-_EDITS = """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"""
+NEW_SHA256 = "1866f2286829aee61389fa7a02064d7b3510372be75382a9ef0b956f95eb01b6"
+_EDITS = """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"""
 
-def sha256(data):
+def _sha(data):
     return hashlib.sha256(data).hexdigest()
 
-def find_exact_base():
+def _candidate_sources(target):
     profile = Path(os.environ.get("APPDATA", Path.home())) / "TG-BTC-Arena-Companion" / "update_backups"
-    candidates = []
+    rows = []
     if profile.exists():
-        candidates.extend(profile.glob("before_7.1.0_*/tg_arena_bot.py"))
-        candidates.extend(profile.glob("**/tg_arena_bot.py"))
+        rows.extend(profile.glob("before_7.1.0_*/tg_arena_bot.py"))
+        rows.extend(profile.glob("before_v7.1.0_*/tg_arena_bot.py"))
+        rows.extend(profile.glob("**/tg_arena_bot.py"))
+    # Also inspect nearby installs/backups in case updater backup naming changed.
+    try:
+        rows.extend(target.parent.parent.glob("**/tg_arena_bot.py"))
+    except Exception:
+        pass
     seen=set()
-    candidates=sorted(candidates,key=lambda p:p.stat().st_mtime if p.exists() else 0,reverse=True)
-    for p in candidates:
+    for p in sorted(rows, key=lambda q: q.stat().st_mtime if q.exists() else 0, reverse=True):
         try:
             rp=str(p.resolve())
-            if rp in seen: continue
+            if rp in seen or p.resolve()==target.resolve():
+                continue
             seen.add(rp)
+            yield p
+        except Exception:
+            continue
+
+def _find_base(target):
+    for p in _candidate_sources(target):
+        try:
             data=p.read_bytes()
-            if sha256(data)==BASE_SHA256:
+            if _sha(data)==BASE_SHA256:
                 return data
         except Exception:
             pass
     raise RuntimeError(
-        "V7.1.1 needs the exact v7.1.0 updater backup, but it was not found. "
-        "Run the v7.1.0 recovery/full-source update first, then run updater.py again."
+        "V7.1.2 could not find the exact v7.1.0 source backup required for this one-time upgrade. "
+        "Use the v7.1.2 standalone recovery package if your updater backup was removed."
     )
 
 def main():
     target=Path(__file__).resolve()
-    base=find_exact_base()
+    base=_find_base(target)
     lines=base.decode("utf-8").splitlines(keepends=True)
     edits=json.loads(gzip.decompress(base64.b64decode(_EDITS)).decode("utf-8"))
-    for i1,i2,repl in sorted(edits,key=lambda x:x[0],reverse=True):
+    for i1,i2,repl in sorted(edits,key=lambda x:int(x[0]),reverse=True):
         lines[int(i1):int(i2)] = list(repl)
     out="".join(lines).encode("utf-8")
-    got=sha256(out)
+    got=_sha(out)
     if got!=NEW_SHA256:
-        raise RuntimeError(f"V7.1.1 deterministic patch checksum mismatch: {got}")
-    tmp=target.with_suffix(target.suffix+".v711.tmp")
+        raise RuntimeError(f"V7.1.2 update checksum mismatch: {got}")
+    # Syntax-check the reconstructed application before replacing the updater payload.
+    compile(out.decode("utf-8"), str(target), "exec")
+    tmp=target.with_suffix(target.suffix+".v712.tmp")
     tmp.write_bytes(out)
     os.replace(tmp,target)
     flags=0x08000000 if os.name=="nt" else 0
