@@ -1,4 +1,4 @@
-name: Validate Arena V2 Phase 1
+name: Validate Arena V2 Pilot
 
 on:
   push:
@@ -19,7 +19,7 @@ jobs:
         with:
           ref: arena-v2
 
-      - name: Build and inspect v7.3.0
+      - name: Build and inspect v7.3.0 Arena V2 Pilot
         shell: bash
         env:
           TG_SKIP_MANIFEST_PUBLISH: "1"
@@ -32,13 +32,15 @@ jobs:
           python -m py_compile /tmp/tg_arena_bot_v7_3_0.py
           grep -F 'APP_VERSION = "7.3.0"' /tmp/tg_arena_bot_v7_3_0.py
           grep -F 'V7.3 Arena V2 Phase 1 — adaptive battle learning build marker' /tmp/tg_arena_bot_v7_3_0.py
-          grep -F 'ARENA_LEARNING_FILE = PROFILE_DIR / "arena_learning_model.json"' /tmp/tg_arena_bot_v7_3_0.py
-          grep -F 'ARENA_TRACE_FILE = PROFILE_DIR / "arena_battle_trace.jsonl"' /tmp/tg_arena_bot_v7_3_0.py
-          grep -F 'min_class_matches": 3' /tmp/tg_arena_bot_v7_3_0.py
-          grep -F 'loss_threshold": 0.94' /tmp/tg_arena_bot_v7_3_0.py
+          grep -F 'V7.3 Arena V2 Pilot — calibrated-action reinforcement controller build marker' /tmp/tg_arena_bot_v7_3_0.py
+          grep -F '"min_trained_matches": 6' /tmp/tg_arena_bot_v7_3_0.py
+          grep -F '"min_actions": 2' /tmp/tg_arena_bot_v7_3_0.py
+          grep -F 'if self._pilot_step(ref, adaptive_loss, actual_w, actual_h):' /tmp/tg_arena_bot_v7_3_0.py
+          grep -F 'for name, point in (strat.get("action_points") or {}).items()' /tmp/tg_arena_bot_v7_3_0.py
+          grep -F 'self._learning_note_action(action, "pilot")' /tmp/tg_arena_bot_v7_3_0.py
+          grep -F 'reward += 0.025 if visual_changed else -0.035' /tmp/tg_arena_bot_v7_3_0.py
+          grep -F 'self._pilot_finish("WIN" if is_win else "LOSS")' /tmp/tg_arena_bot_v7_3_0.py
           grep -F 'adaptive_loss = self._learning_sample(ref, auto_state)' /tmp/tg_arena_bot_v7_3_0.py
-          grep -F 'self._learning_finish(' /tmp/tg_arena_bot_v7_3_0.py
-          grep -F 'self._learning_note_action("ENABLE_AUTO", "bootstrap")' /tmp/tg_arena_bot_v7_3_0.py
           grep -F 'V7.2.1: HOME is the only screen allowed a bounded soft match.' /tmp/tg_arena_bot_v7_3_0.py
           grep -F 'V7.2.2: the first changed frame is often only a transition.' /tmp/tg_arena_bot_v7_3_0.py
 
@@ -49,24 +51,37 @@ jobs:
           p = Path('/tmp/tg_arena_bot_v7_3_0.py')
           text = p.read_text(encoding='utf-8')
           ast.parse(text)
+          pilot_pos = text.index('if self._pilot_step(ref, adaptive_loss, actual_w, actual_h):')
+          auto_pos = text.index('if auto_state == "OFF":', pilot_pos)
+          dodge_pos = text.rfind('if self.dodge_in_progress:', 0, pilot_pos)
           checks = {
               'app_version': text.count('APP_VERSION = "7.3.0"') == 1,
-              'learning_marker': text.count('V7.3 Arena V2 Phase 1 — adaptive battle learning build marker') == 1,
-              'learning_begin': text.count('self._learning_begin()') == 1,
-              'learning_sample': text.count('adaptive_loss = self._learning_sample(ref, auto_state)') == 1,
-              'learning_finish': text.count('self._learning_finish(') == 1,
-              'adaptive_quit': text.count('arena_adaptive_quit_ready()') >= 2,
+              'phase1_learning': text.count('V7.3 Arena V2 Phase 1 — adaptive battle learning build marker') == 1,
+              'pilot_marker': text.count('V7.3 Arena V2 Pilot — calibrated-action reinforcement controller build marker') == 1,
+              'pilot_methods': all(text.count(x) == 1 for x in [
+                  'def _pilot_reset(self):', 'def _pilot_ready(self):',
+                  'def _pilot_choose_action(self, context, action_names):',
+                  'def _pilot_step(self, ref_screen, loss_probability, actual_w, actual_h):',
+                  'def _pilot_finish(self, result):',
+              ]),
+              'requires_calibration': 'len(points) < min_actions' in text and '"min_actions": 2' in text,
+              'requires_warmup': 'trained < minimum' in text and '"min_trained_matches": 6' in text,
+              'calibrated_points_only': text.count('for name, point in (strat.get("action_points") or {}).items()') >= 2,
+              'pilot_preempts_auto': 0 <= dodge_pos < pilot_pos < auto_pos,
+              'action_learning': 'reward += 0.025 if visual_changed else -0.035' in text,
+              'outcome_learning': 'self._pilot_finish("WIN" if is_win else "LOSS")' in text,
+              'adaptive_quit_preserved': text.count('arena_adaptive_quit_ready()') >= 2,
               'home_hotfix_preserved': text.count('V7.2.1: HOME is the only screen allowed a bounded soft match.') == 1,
               'route_hotfix_preserved': text.count('V7.2.2: the first changed frame is often only a transition.') == 1,
-              'auto_bootstrap_logged': text.count('self._learning_note_action("ENABLE_AUTO", "bootstrap")') == 1,
-              'trace_file': text.count('arena_battle_trace.jsonl') == 1,
-              'model_file': text.count('arena_learning_model.json') == 1,
+              'auto_bootstrap_preserved': text.count('self._learning_note_action("ENABLE_AUTO", "bootstrap")') == 1,
+              'persistent_trace': text.count('arena_battle_trace.jsonl') == 1,
+              'persistent_model': text.count('arena_learning_model.json') == 1,
           }
           if not all(checks.values()):
-              raise SystemExit(f'Arena V2 validation failed: {checks}')
+              raise SystemExit(f'Arena V2 Pilot validation failed: {checks}')
           raw = p.read_bytes()
           receipt = {
-              'version': '7.3.0-dev-phase1',
+              'version': '7.3.0-dev-pilot',
               'source_sha256': hashlib.sha256(raw).hexdigest(),
               'source_bytes': len(raw),
               'compiled': True,
@@ -81,5 +96,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add release_payload/ARENA_V2_VALIDATION.json
-          git commit -m "Record Arena V2 Phase 1 validation [skip ci]"
+          git commit -m "Record Arena V2 Pilot validation [skip ci]"
           git push origin HEAD:arena-v2
