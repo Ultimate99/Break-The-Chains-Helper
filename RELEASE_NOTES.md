@@ -1,17 +1,20 @@
-# TG:BTC Game Assistant 7.2.1 — HOME Vision Hotfix
+# TG:BTC Game Assistant 7.2.2 — Route Settle Hotfix
 
-## Fixed: Daily Assistant could reject the real Home screen
-- Fixes a V7.2 issue where live Home animation/art differences could push the perceptual-hash distance outside the strict recorded threshold and block Daily Assistant with `vision=UNKNOWN`.
-- HOME verification now has a **bounded HOME-only soft match** when HOME is still the nearest known screen.
-- The soft HOME limit is `d <= 20.0`; the reported failing live frame at `d=17.0` is accepted.
+## Fixes route verification during screen transitions
+- Daily Assistant no longer treats the first changed animation frame after a navigation tap as the final destination.
+- After a route tap, the assistant keeps polling for the expected destination screen for up to **2.40 seconds**.
+- Verification returns immediately as soon as the expected screen is recognized, so fast transitions stay fast.
+- This fixes false route failures such as `expected MAIL` while Vision reports an unrelated transient nearest screen during loading.
 
-## Safety unchanged
-- The relaxed rule applies **only to HOME verification**.
-- Mail, Shop, Quest, Events, Recruit, Chain Campaign, Idle popup and reward-overlay checks keep their original strict visual matching.
+## Safety preserved
+- Mail, Shop, Quest, Events, Recruit, Chain and Idle destination fingerprints keep their strict thresholds.
+- The V7.2.1 bounded HOME soft-match remains HOME-only.
 - Safe-action rules remain unchanged: only literal **CLAIM**, **CLAIM ALL** and **FREE** can become action targets.
-- BUY, EXCHANGE, USE, SWEEP, START, GO NOW and spend actions remain blocked.
+- No blind route re-tap was added after anchor failure.
 - Android Back is still never used to find Home.
 
-## Update reliability
-- Keeps the V7.2 GitHub Release updater and checksum-verified `current_source_manifest.json` fallback.
-- AppData profile, history, calibration and user settings remain untouched.
+## Preserved
+- Vision Inspector, pHash/OpenCV screen understanding, compact OCR confirmation and same-frame caching.
+- Verified Home return/retry, Run All Safe, individual Daily modules, DRY RUN and STOP.
+- Arena, Smart Dodge, Intelligence, Strategy, History and Diagnostics.
+- AppData profile, history, calibration and settings remain untouched.
