@@ -1,0 +1,85 @@
+name: Validate Arena V2 Phase 1
+
+on:
+  push:
+    branches:
+      - arena-v2
+    paths:
+      - ".github/workflows/arena_v2_validate.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: arena-v2
+
+      - name: Build and inspect v7.3.0
+        shell: bash
+        env:
+          TG_SKIP_MANIFEST_PUBLISH: "1"
+        run: |
+          set -euo pipefail
+          python release_payload/build_release_v730.py \
+            --repo-root . \
+            --version 7.3.0 \
+            --output /tmp/tg_arena_bot_v7_3_0.py
+          python -m py_compile /tmp/tg_arena_bot_v7_3_0.py
+          grep -F 'APP_VERSION = "7.3.0"' /tmp/tg_arena_bot_v7_3_0.py
+          grep -F 'V7.3 Arena V2 Phase 1 — adaptive battle learning build marker' /tmp/tg_arena_bot_v7_3_0.py
+          grep -F 'ARENA_LEARNING_FILE = PROFILE_DIR / "arena_learning_model.json"' /tmp/tg_arena_bot_v7_3_0.py
+          grep -F 'ARENA_TRACE_FILE = PROFILE_DIR / "arena_battle_trace.jsonl"' /tmp/tg_arena_bot_v7_3_0.py
+          grep -F 'min_class_matches": 3' /tmp/tg_arena_bot_v7_3_0.py
+          grep -F 'loss_threshold": 0.94' /tmp/tg_arena_bot_v7_3_0.py
+          grep -F 'adaptive_loss = self._learning_sample(ref, auto_state)' /tmp/tg_arena_bot_v7_3_0.py
+          grep -F 'self._learning_finish(' /tmp/tg_arena_bot_v7_3_0.py
+          grep -F 'self._learning_note_action("ENABLE_AUTO", "bootstrap")' /tmp/tg_arena_bot_v7_3_0.py
+          grep -F 'V7.2.1: HOME is the only screen allowed a bounded soft match.' /tmp/tg_arena_bot_v7_3_0.py
+          grep -F 'V7.2.2: the first changed frame is often only a transition.' /tmp/tg_arena_bot_v7_3_0.py
+
+          python - <<'PY'
+          import ast, hashlib, json
+          from datetime import datetime, timezone
+          from pathlib import Path
+          p = Path('/tmp/tg_arena_bot_v7_3_0.py')
+          text = p.read_text(encoding='utf-8')
+          ast.parse(text)
+          checks = {
+              'app_version': text.count('APP_VERSION = "7.3.0"') == 1,
+              'learning_marker': text.count('V7.3 Arena V2 Phase 1 — adaptive battle learning build marker') == 1,
+              'learning_begin': text.count('self._learning_begin()') == 1,
+              'learning_sample': text.count('adaptive_loss = self._learning_sample(ref, auto_state)') == 1,
+              'learning_finish': text.count('self._learning_finish(') == 1,
+              'adaptive_quit': text.count('arena_adaptive_quit_ready()') >= 2,
+              'home_hotfix_preserved': text.count('V7.2.1: HOME is the only screen allowed a bounded soft match.') == 1,
+              'route_hotfix_preserved': text.count('V7.2.2: the first changed frame is often only a transition.') == 1,
+              'auto_bootstrap_logged': text.count('self._learning_note_action("ENABLE_AUTO", "bootstrap")') == 1,
+              'trace_file': text.count('arena_battle_trace.jsonl') == 1,
+              'model_file': text.count('arena_learning_model.json') == 1,
+          }
+          if not all(checks.values()):
+              raise SystemExit(f'Arena V2 validation failed: {checks}')
+          raw = p.read_bytes()
+          receipt = {
+              'version': '7.3.0-dev-phase1',
+              'source_sha256': hashlib.sha256(raw).hexdigest(),
+              'source_bytes': len(raw),
+              'compiled': True,
+              'checks': checks,
+              'validated_at': datetime.now(timezone.utc).isoformat(),
+          }
+          Path('release_payload/ARENA_V2_VALIDATION.json').write_text(
+              json.dumps(receipt, indent=2) + '\n', encoding='utf-8'
+          )
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add release_payload/ARENA_V2_VALIDATION.json
+          git commit -m "Record Arena V2 Phase 1 validation [skip ci]"
+          git push origin HEAD:arena-v2
