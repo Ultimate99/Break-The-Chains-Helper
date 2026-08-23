@@ -1,24 +1,17 @@
-# TG:BTC Game Assistant 7.1.2 — Turbo Daily + Updater Fix
+# TG:BTC Game Assistant 7.2.1 — HOME Vision Hotfix
 
-## Much faster Daily Assistant
-- Safe-action OCR is now about 3–5x faster on the recorded TG:BTC screens by recognizing on a scaled frame and mapping taps back to the full reference canvas.
-- Daily navigation reacts to the first changed Fast Vision frame instead of sitting through long fixed delays.
-- Daily Fast Vision targets 24 FPS and keeps warming in the background if Android's encoder starts slowly.
-- HOME and Idle Farming verification use visual fingerprints and no longer invoke unnecessary OCR.
-- Duplicate route verification and normal-run debug PNG writes were removed from the hot path.
-- Shop and Quest Pass tab traversal is frame-driven instead of repeatedly waiting on multi-second OCR loops.
+## Fixed: Daily Assistant could reject the real Home screen
+- Fixes a V7.2 issue where live Home animation/art differences could push the perceptual-hash distance outside the strict recorded threshold and block Daily Assistant with `vision=UNKNOWN`.
+- HOME verification now has a **bounded HOME-only soft match** when HOME is still the nearest known screen.
+- The soft HOME limit is `d <= 20.0`; the reported failing live frame at `d=17.0` is accepted.
 
-## Verified Home retry
-- Every automated return Home verifies that the Home screen is actually visible.
-- If Home is not visible, the assistant repeats the Home action automatically, up to 4 verified attempts.
-- Daily Assistant still never sends Android Back.
+## Safety unchanged
+- The relaxed rule applies **only to HOME verification**.
+- Mail, Shop, Quest, Events, Recruit, Chain Campaign, Idle popup and reward-overlay checks keep their original strict visual matching.
+- Safe-action rules remain unchanged: only literal **CLAIM**, **CLAIM ALL** and **FREE** can become action targets.
+- BUY, EXCHANGE, USE, SWEEP, START, GO NOW and spend actions remain blocked.
+- Android Back is still never used to find Home.
 
-## Updater reliability
-- Fixes the misleading `Installed v7.1.0 / Latest v7.1.0` state by publishing this build through the normal GitHub Release channel used by existing installations.
-- From v7.1.2 onward, the built-in checker also compares GitHub Releases with `main/VERSION` so a delayed Release cannot hide a newer build.
-- When main is newer than Releases, the app can reconstruct and SHA-validate the full source from a source manifest.
-
-## Preserved
-- Explicit `CLAIM / CLAIM ALL / FREE` safe-action policy.
-- Run All Safe, individual Daily modules, DRY RUN, STOP, routes, summaries, Arena, Smart Dodge, Intelligence and Strategy.
-- AppData profile/history/calibration data remains untouched.
+## Update reliability
+- Keeps the V7.2 GitHub Release updater and checksum-verified `current_source_manifest.json` fallback.
+- AppData profile, history, calibration and user settings remain untouched.
