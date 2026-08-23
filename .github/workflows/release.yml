@@ -7,6 +7,11 @@ on:
     paths:
       - "VERSION"
       - ".github/workflows/release.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "release_payload/validation_trigger.txt"
   workflow_dispatch:
 
 permissions:
@@ -38,9 +43,9 @@ jobs:
           python -m py_compile "$PAYLOAD_DIR/tg_arena_bot.py"
           grep -F "APP_VERSION = \"${VERSION}\"" "$PAYLOAD_DIR/tg_arena_bot.py"
 
-          # While 7.1.2 remains public, use its workflow run as a hidden
-          # compile/anchor test of the pending 7.2.0 patch against the exact
-          # checksum-verified full source. Nothing from this test is published.
+          # While 7.1.2 remains public, compile the pending 7.2.0 source too.
+          # This verifies every text anchor against the checksum-verified real
+          # source before VERSION is allowed to expose the build to the app.
           if [ "$VERSION" = "7.1.2" ]; then
             python release_payload/build_release.py \
               --repo-root . \
@@ -61,6 +66,7 @@ jobs:
           echo "ZIP=$ZIP" >> "$GITHUB_ENV"
 
       - name: Record validation receipt
+        if: github.event_name != 'pull_request'
         shell: bash
         run: |
           set -euo pipefail
@@ -103,6 +109,7 @@ jobs:
           if-no-files-found: error
 
       - name: Publish GitHub Release
+        if: github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
