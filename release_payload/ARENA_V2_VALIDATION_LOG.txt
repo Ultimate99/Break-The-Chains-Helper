@@ -1,4 +1,28 @@
 Built TG:BTC source v7.2.0: /tmp/tg_arena_bot_v7_3_0.py.v722base.v720base (362176 bytes) sha256=8ea07afd9ba27e9040947fab82ee456e122ea48c37d24ca607c0b02747486a7c
 Generated v7.2.2 hotfix: 363319 bytes, sha256=0f20427e63011263cf9c7bacb4d3e604175cd00dac29f218fecda665cc56f289
 Updater manifest ready: v7.2.2, 363319 bytes, sha256=0f20427e63011263cf9c7bacb4d3e604175cd00dac29f218fecda665cc56f289, parts=5
-Generated v7.3.0: 399190 bytes, sha256=50ec0367c9a53fb188a19433af7cfc015296d31f8ddd9458b552a30c4d1f9bbb
+Traceback (most recent call last):
+  File "/usr/lib/python3.12/py_compile.py", line 144, in compile
+    code = loader.source_to_code(source_bytes, dfile or file,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap_external>", line 1059, in source_to_code
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/tmp/tg_arena_bot_v7_3_0.py", line 9308
+    \n# V7.3 Daily Self-Healing Vision — OCR-verified adaptive fingerprints + bounded recovery build marker\n
+     ^
+SyntaxError: unexpected character after line continuation character
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/runner/work/Break-The-Chains-Helper/Break-The-Chains-Helper/release_payload/build_release_v730.py", line 72, in <module>
+    main()
+  File "/home/runner/work/Break-The-Chains-Helper/Break-The-Chains-Helper/release_payload/build_release_v730.py", line 63, in main
+    py_compile.compile(str(output), doraise=True)
+  File "/usr/lib/python3.12/py_compile.py", line 150, in compile
+    raise py_exc
+py_compile.PyCompileError:   File "/tmp/tg_arena_bot_v7_3_0.py", line 9308
+    \n# V7.3 Daily Self-Healing Vision — OCR-verified adaptive fingerprints + bounded recovery build marker\n
+     ^
+SyntaxError: unexpected character after line continuation character
+
