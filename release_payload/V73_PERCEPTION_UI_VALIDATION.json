@@ -1,8 +1,8 @@
 {
   "version": "7.3.0-dev-perception-ui",
   "passed": true,
-  "source_sha256": "c5b6441ba8f19f2e1b22813a3dddc1752c545639e8a29aecab0f8a8f4de5331a",
-  "source_bytes": 447547,
+  "source_sha256": "bc95436b0d63e573a6024bfa510a652ea61d9ed1f7c95369e646eb2a9e96ed81",
+  "source_bytes": 448036,
   "checks": {
     "ui_marker": true,
     "history_entry": true,
