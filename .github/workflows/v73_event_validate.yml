@@ -1,0 +1,61 @@
+name: Validate V7.3 Event Memory
+
+on:
+  push:
+    branches: [arena-v2]
+    paths:
+      - ".github/workflows/v73_event_validate.yml"
+      - "release_payload/build_release_v730.py"
+      - "release_payload/arena_v2_perception_events.py"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: arena-v2
+      - name: Build and inspect
+        env:
+          TG_SKIP_MANIFEST_PUBLISH: "1"
+        run: |
+          set -euo pipefail
+          python release_payload/build_release_v730.py --repo-root . --version 7.3.0 --output /tmp/v73.py
+          python -m py_compile /tmp/v73.py
+          python - <<'PY'
+          import ast, hashlib, json
+          from pathlib import Path
+          p=Path('/tmp/v73.py'); text=p.read_text(encoding='utf-8'); tree=ast.parse(text)
+          checks={
+            'marker': text.count('V7.3 Arena Event Memory — unlabeled opponent move/card visual clusters build marker')==1,
+            'event_dir': 'ARENA_EVENT_DIR = PROFILE_DIR / "arena_event_samples"' in text,
+            'bounded_clusters': '"event_max_clusters": 120' in text and 'len(clusters) >= max_clusters' in text,
+            'bounded_evidence': 'for stale in files[:-120]:' in text,
+            'no_fake_label': '"label": None' in text,
+            'dct_signature': 'coeff = cv2.dct(small)[:8, :8].reshape(-1)' in text,
+            'change_gate': 'event_distance >= change_bits' in text,
+            'cooldown_gate': 'elapsed - self._learning_last_enemy_event_at >= cooldown' in text,
+            'trace_cluster': '"kind": "enemy_event"' in text and '"cluster": cluster_id' in text,
+            'hero_context': 'hero_counts[hero] = int(hero_counts.get(hero) or 0) + 1' in text,
+            'time_context': 'bucket = _arena_time_bucket(elapsed_s)' in text,
+            'outcome_attribution': 'arena_apply_event_outcome(trace, result)' in text,
+            'win_loss_stats': 'key = "wins" if result == "WIN" else "losses"' in text,
+            'no_event_direct_quit': 'reason=f"Adaptive loss {adaptive_loss * 100.0:.0f}%"' in text,
+          }
+          methods={n.name for n in ast.walk(tree) if isinstance(n,ast.FunctionDef)}
+          checks['methods']={'_arena_event_signature','_arena_event_hamming','arena_record_enemy_event','arena_apply_event_outcome','arena_event_summary'}.issubset(methods)
+          checks['no_dead_fake_capture']='_phone_safe_ref_for_event' not in text
+          receipt={'version':'7.3.0-dev-events','passed':all(checks.values()),'source_sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'source_bytes':p.stat().st_size,'checks':checks}
+          Path('release_payload/V73_EVENT_VALIDATION.json').write_text(json.dumps(receipt,indent=2)+'\n',encoding='utf-8')
+          if not receipt['passed']:
+            raise SystemExit(json.dumps(checks,indent=2))
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add release_payload/V73_EVENT_VALIDATION.json
+          git commit -m "Record V7.3 event-memory validation [skip ci]" || true
+          git push origin HEAD:arena-v2 || true
