@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/home/runner/work/Break-The-Chains-Helper/Break-The-Chains-Helper/release_payload/build_release_v730.py", line 12, in <module>
+    from arena_v2_pilot_patch import apply_arena_v2_pilot_patch
+  File "/home/runner/work/Break-The-Chains-Helper/Break-The-Chains-Helper/release_payload/arena_v2_pilot_patch.py", line 11, in <module>
+    source = gzip.decompress(base64.b64decode(payload))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/gzip.py", line 632, in decompress
+    decompressed = do.decompress(data[fp.tell():])
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+zlib.error: Error -3 while decompressing data: invalid bit length repeat
