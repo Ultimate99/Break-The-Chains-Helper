@@ -7,11 +7,6 @@ on:
     paths:
       - "VERSION"
       - ".github/workflows/release.yml"
-  pull_request:
-    branches:
-      - main
-    paths:
-      - "release_payload/validation_trigger.txt"
   workflow_dispatch:
 
 permissions:
@@ -28,45 +23,99 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
           VERSION="$(tr -d '[:space:]' < VERSION)"
           TAG="$VERSION"
           PAYLOAD_DIR="dist/TG_BTC_Arena_Companion_v${VERSION}"
           ZIP="TG_BTC_Arena_Companion_v${VERSION}.zip"
-
           mkdir -p "$PAYLOAD_DIR"
-          python release_payload/build_release.py \
-            --repo-root . \
-            --version "$VERSION" \
-            --output "$PAYLOAD_DIR/tg_arena_bot.py"
+
+          if [ "$VERSION" = "7.3.0" ]; then
+            python release_payload/build_release_v730.py \
+              --repo-root . \
+              --version "$VERSION" \
+              --output "$PAYLOAD_DIR/tg_arena_bot.py"
+          else
+            python release_payload/build_release.py \
+              --repo-root . \
+              --version "$VERSION" \
+              --output "$PAYLOAD_DIR/tg_arena_bot.py"
+          fi
 
           python -m py_compile "$PAYLOAD_DIR/tg_arena_bot.py"
           grep -F "APP_VERSION = \"${VERSION}\"" "$PAYLOAD_DIR/tg_arena_bot.py"
 
-          # While 7.1.2 remains public, compile the pending 7.2.0 source too.
-          # This verifies every text anchor against the checksum-verified real
-          # source before VERSION is allowed to expose the build to the app.
-          if [ "$VERSION" = "7.1.2" ]; then
-            python release_payload/build_release.py \
-              --repo-root . \
-              --version "7.2.0" \
-              --output "/tmp/tg_arena_bot_v7_2_0.py"
-            python -m py_compile "/tmp/tg_arena_bot_v7_2_0.py"
-            grep -F 'APP_VERSION = "7.2.0"' "/tmp/tg_arena_bot_v7_2_0.py"
-            grep -F 'V7.2 Vision-First Assistant build marker' "/tmp/tg_arena_bot_v7_2_0.py"
+          if [ "$VERSION" = "7.3.0" ]; then
+            python - <<'PY'
+          import hashlib
+          from pathlib import Path
+          p = Path('dist/TG_BTC_Arena_Companion_v7.3.0/tg_arena_bot.py')
+          raw = p.read_bytes()
+          got = hashlib.sha256(raw).hexdigest()
+          expected = 'c5b6441ba8f19f2e1b22813a3dddc1752c545639e8a29aecab0f8a8f4de5331a'
+          if got != expected:
+              raise SystemExit(f'V7.3 validated-source SHA mismatch: {got} != {expected}')
+          if len(raw) != 447547:
+              raise SystemExit(f'V7.3 validated-source size mismatch: {len(raw)} != 447547')
+          text = raw.decode('utf-8')
+          required = [
+              'V7.3 Arena V2 Phase 1 — adaptive battle learning build marker',
+              'V7.3 Arena V2 Pilot — calibrated-action reinforcement controller build marker',
+              'V7.3 Daily Self-Healing Vision — OCR-verified adaptive fingerprints + bounded recovery build marker',
+          ]
+          for marker in required:
+              if text.count(marker) != 1:
+                  raise SystemExit(f'Missing/duplicate V7.3 marker: {marker}')
+          PY
           fi
 
           (
             cd dist
             zip -qr "../$ZIP" "TG_BTC_Arena_Companion_v${VERSION}"
           )
-
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "TAG=$TAG" >> "$GITHUB_ENV"
           echo "ZIP=$ZIP" >> "$GITHUB_ENV"
 
+      - name: Publish checksum-verified updater manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import base64, bz2, hashlib, json, os
+          from pathlib import Path
+          version = os.environ['VERSION']
+          source = Path(f'dist/TG_BTC_Arena_Companion_v{version}/tg_arena_bot.py')
+          raw = source.read_bytes()
+          encoded = base64.b64encode(bz2.compress(raw, compresslevel=9)).decode('ascii')
+          out = Path('release_payload/current_source_parts')
+          out.mkdir(parents=True, exist_ok=True)
+          for p in out.glob('part*.txt'):
+              p.unlink()
+          parts = []
+          for i in range(0, len(encoded), 20000):
+              name = f'part{i // 20000 + 1:02d}.txt'
+              (out / name).write_text(encoded[i:i+20000], encoding='utf-8')
+              parts.append(f'current_source_parts/{name}')
+          manifest = {
+              'version': version,
+              'sha256': hashlib.sha256(raw).hexdigest(),
+              'bytes': len(raw),
+              'encoding': 'base64+bz2',
+              'parts': parts,
+          }
+          Path('release_payload/current_source_manifest.json').write_text(
+              json.dumps(manifest, indent=2) + '\n', encoding='utf-8'
+          )
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A release_payload/current_source_manifest.json release_payload/current_source_parts
+          if ! git diff --cached --quiet; then
+            git commit -m "Publish updater source manifest v${VERSION} [skip ci]"
+            git push
+          fi
+
       - name: Record validation receipt
-        if: github.event_name != 'pull_request'
         shell: bash
         run: |
           set -euo pipefail
@@ -74,25 +123,17 @@ jobs:
           import hashlib, json, os
           from datetime import datetime, timezone
           from pathlib import Path
-
-          version = os.environ["VERSION"]
-          source = Path(f"dist/TG_BTC_Arena_Companion_v{version}/tg_arena_bot.py")
+          version = os.environ['VERSION']
+          source = Path(f'dist/TG_BTC_Arena_Companion_v{version}/tg_arena_bot.py')
           record = {
-              "version": version,
-              "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
-              "source_bytes": source.stat().st_size,
-              "validated_at": datetime.now(timezone.utc).isoformat(),
-              "full_source_build": True,
-              "v7_2_0_hidden_validation": False,
+              'version': version,
+              'source_sha256': hashlib.sha256(source.read_bytes()).hexdigest(),
+              'source_bytes': source.stat().st_size,
+              'validated_at': datetime.now(timezone.utc).isoformat(),
+              'full_source_build': True,
           }
-          pending = Path("/tmp/tg_arena_bot_v7_2_0.py")
-          if pending.exists():
-              record["v7_2_0_hidden_validation"] = True
-              record["v7_2_0_sha256"] = hashlib.sha256(pending.read_bytes()).hexdigest()
-              record["v7_2_0_bytes"] = pending.stat().st_size
-          Path("release_payload/LAST_BUILD.json").write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+          Path('release_payload/LAST_BUILD.json').write_text(json.dumps(record, indent=2) + '\n', encoding='utf-8')
           PY
-
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add release_payload/LAST_BUILD.json
@@ -109,7 +150,6 @@ jobs:
           if-no-files-found: error
 
       - name: Publish GitHub Release
-        if: github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
@@ -121,7 +161,6 @@ jobs:
             NOTES_FILE="$VERSION_NOTES"
           fi
           NOTES="$(cat "$NOTES_FILE")"
-
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "$ZIP" --clobber
             gh release edit "$TAG" --title "TG:BTC Game Assistant $VERSION" --notes "$NOTES"
@@ -133,7 +172,6 @@ jobs:
           fi
 
       - name: Verify published release and record receipt
-        if: github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
@@ -144,40 +182,38 @@ jobs:
           import hashlib, json, os
           from datetime import datetime, timezone
           from pathlib import Path
-
-          version = os.environ["VERSION"]
-          expected_asset = os.environ["ZIP"]
-          release = json.loads(Path("/tmp/published_release.json").read_text(encoding="utf-8"))
-          assets = release.get("assets") or []
-          matches = [a for a in assets if a.get("name") == expected_asset]
+          version = os.environ['VERSION']
+          expected_asset = os.environ['ZIP']
+          release = json.loads(Path('/tmp/published_release.json').read_text(encoding='utf-8'))
+          assets = release.get('assets') or []
+          matches = [a for a in assets if a.get('name') == expected_asset]
           if len(matches) != 1:
-              raise SystemExit(f"Expected exactly one published asset {expected_asset!r}, found {len(matches)}")
+              raise SystemExit(f'Expected exactly one published asset {expected_asset!r}, found {len(matches)}')
           asset = matches[0]
-          if int(asset.get("size") or 0) <= 0:
-              raise SystemExit(f"Published asset {expected_asset!r} has invalid size")
-          source = Path(f"dist/TG_BTC_Arena_Companion_v{version}/tg_arena_bot.py")
+          if int(asset.get('size') or 0) <= 0:
+              raise SystemExit('Published asset has invalid size')
+          source = Path(f'dist/TG_BTC_Arena_Companion_v{version}/tg_arena_bot.py')
           receipt = {
-              "version": version,
-              "tag": release.get("tagName"),
-              "release_name": release.get("name"),
-              "release_url": release.get("url"),
-              "published_at": release.get("publishedAt"),
-              "verified_at": datetime.now(timezone.utc).isoformat(),
-              "is_draft": bool(release.get("isDraft")),
-              "is_prerelease": bool(release.get("isPrerelease")),
-              "asset_name": asset.get("name"),
-              "asset_bytes": int(asset.get("size") or 0),
-              "asset_url": asset.get("url"),
-              "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
-              "source_bytes": source.stat().st_size,
+              'version': version,
+              'tag': release.get('tagName'),
+              'release_name': release.get('name'),
+              'release_url': release.get('url'),
+              'published_at': release.get('publishedAt'),
+              'verified_at': datetime.now(timezone.utc).isoformat(),
+              'is_draft': bool(release.get('isDraft')),
+              'is_prerelease': bool(release.get('isPrerelease')),
+              'asset_name': asset.get('name'),
+              'asset_bytes': int(asset.get('size') or 0),
+              'asset_url': asset.get('url'),
+              'source_sha256': hashlib.sha256(source.read_bytes()).hexdigest(),
+              'source_bytes': source.stat().st_size,
           }
-          if receipt["tag"] != version:
+          if receipt['tag'] != version:
               raise SystemExit(f"Published tag mismatch: {receipt['tag']!r} != {version!r}")
-          if receipt["is_draft"]:
-              raise SystemExit("Release is still a draft")
-          Path("release_payload/LAST_PUBLISHED.json").write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
+          if receipt['is_draft'] or receipt['is_prerelease']:
+              raise SystemExit('Release is draft/prerelease')
+          Path('release_payload/LAST_PUBLISHED.json').write_text(json.dumps(receipt, indent=2) + '\n', encoding='utf-8')
           PY
-
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add release_payload/LAST_PUBLISHED.json
