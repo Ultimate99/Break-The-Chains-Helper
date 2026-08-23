@@ -1,7 +1,7 @@
 {
-  "version": "7.3.0-dev-pilot",
-  "source_sha256": "50ec0367c9a53fb188a19433af7cfc015296d31f8ddd9458b552a30c4d1f9bbb",
-  "source_bytes": 399190,
+  "version": "7.3.0-dev-quality",
+  "source_sha256": "cb1a2a2efe25cfd270a7f72e91c0a7a8d2303d14674b138485550dab00b620bc",
+  "source_bytes": 411125,
   "compiled": true,
   "checks": {
     "app_version": true,
@@ -22,8 +22,20 @@
     "auto_bootstrap_preserved": true,
     "persistent_trace": true,
     "persistent_model": true,
-    "pilot_methods": true,
-    "priority_order": true,
-    "readable_pilot_patch": true
+    "daily_marker": true,
+    "daily_adaptive_file": true,
+    "daily_adaptive_learning": true,
+    "daily_ocr_fallback": true,
+    "daily_unknown_only_override": true,
+    "daily_bounded_recovery": true,
+    "daily_failure_evidence": true,
+    "daily_no_unknown_nav": true,
+    "daily_no_android_back": true,
+    "safe_action_literals": true,
+    "idle_verified_fallback_preserved": true,
+    "required_methods": true,
+    "arena_priority_order": true,
+    "readable_pilot_patch": true,
+    "readable_daily_patch": true
   }
 }
