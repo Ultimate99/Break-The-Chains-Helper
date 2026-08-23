@@ -1,0 +1,30 @@
+name: Export V7.2.1 debug source
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/debug_v721_source.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build exact current V7.2.1 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          python release_payload/build_release.py --repo-root . --version "$VERSION" --output /tmp/debug_v721_source.py
+          python -m py_compile /tmp/debug_v721_source.py
+          cp /tmp/debug_v721_source.py release_payload/debug_v721_source.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add release_payload/debug_v721_source.py
+          git commit -m "Export temporary V7.2.1 debug source [skip ci]"
+          git push
