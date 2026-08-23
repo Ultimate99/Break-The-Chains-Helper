@@ -6,8 +6,6 @@ on:
       - main
     paths:
       - "VERSION"
-      - "RELEASE_NOTES.md"
-      - "release_payload/current_bootstrap.py"
       - ".github/workflows/release.yml"
   workflow_dispatch:
 
@@ -21,7 +19,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Build update ZIP
+      - name: Build and validate full-source update ZIP
         shell: bash
         run: |
           set -euo pipefail
@@ -32,10 +30,26 @@ jobs:
           ZIP="TG_BTC_Arena_Companion_v${VERSION}.zip"
 
           mkdir -p "$PAYLOAD_DIR"
-          cp release_payload/current_bootstrap.py "$PAYLOAD_DIR/tg_arena_bot.py"
+          python release_payload/build_release.py \
+            --repo-root . \
+            --version "$VERSION" \
+            --output "$PAYLOAD_DIR/tg_arena_bot.py"
 
           python -m py_compile "$PAYLOAD_DIR/tg_arena_bot.py"
           grep -F "APP_VERSION = \"${VERSION}\"" "$PAYLOAD_DIR/tg_arena_bot.py"
+
+          # While 7.1.2 remains public, use its workflow run as a hidden
+          # compile/anchor test of the pending 7.2.0 patch against the exact
+          # checksum-verified full source. Nothing from this test is published.
+          if [ "$VERSION" = "7.1.2" ]; then
+            python release_payload/build_release.py \
+              --repo-root . \
+              --version "7.2.0" \
+              --output "/tmp/tg_arena_bot_v7_2_0.py"
+            python -m py_compile "/tmp/tg_arena_bot_v7_2_0.py"
+            grep -F 'APP_VERSION = "7.2.0"' "/tmp/tg_arena_bot_v7_2_0.py"
+            grep -F 'V7.2 Vision-First Assistant build marker' "/tmp/tg_arena_bot_v7_2_0.py"
+          fi
 
           (
             cd dist
@@ -46,13 +60,25 @@ jobs:
           echo "TAG=$TAG" >> "$GITHUB_ENV"
           echo "ZIP=$ZIP" >> "$GITHUB_ENV"
 
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TG_BTC_Arena_Companion_v${{ env.VERSION }}
+          path: ${{ env.ZIP }}
+          if-no-files-found: error
+
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
-          NOTES="$(cat RELEASE_NOTES.md)"
+          NOTES_FILE="RELEASE_NOTES.md"
+          VERSION_NOTES="release_payload/release_notes/v${VERSION}.md"
+          if [ -f "$VERSION_NOTES" ]; then
+            NOTES_FILE="$VERSION_NOTES"
+          fi
+          NOTES="$(cat "$NOTES_FILE")"
 
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "$ZIP" --clobber
