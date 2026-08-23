@@ -1,0 +1,156 @@
+name: Release V7.3 Production
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/release_v730.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release-v730:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build exact validated V7.3 source
+        shell: bash
+        env:
+          TG_SKIP_MANIFEST_PUBLISH: "1"
+        run: |
+          set -euo pipefail
+          test "$(tr -d '[:space:]' < VERSION)" = "7.3.0"
+          mkdir -p dist/TG_BTC_Arena_Companion_v7.3.0
+          python release_payload/build_release_v730.py \
+            --repo-root . \
+            --version 7.3.0 \
+            --output dist/TG_BTC_Arena_Companion_v7.3.0/tg_arena_bot.py
+          python -m py_compile dist/TG_BTC_Arena_Companion_v7.3.0/tg_arena_bot.py
+          python - <<'PY'
+          import hashlib
+          from pathlib import Path
+          p = Path('dist/TG_BTC_Arena_Companion_v7.3.0/tg_arena_bot.py')
+          raw = p.read_bytes()
+          expected_sha = 'c5b6441ba8f19f2e1b22813a3dddc1752c545639e8a29aecab0f8a8f4de5331a'
+          if hashlib.sha256(raw).hexdigest() != expected_sha:
+              raise SystemExit('V7.3 source SHA mismatch')
+          if len(raw) != 447547:
+              raise SystemExit(f'V7.3 source size mismatch: {len(raw)}')
+          PY
+          (cd dist && zip -qr ../TG_BTC_Arena_Companion_v7.3.0.zip TG_BTC_Arena_Companion_v7.3.0)
+
+      - name: Publish updater manifest and build receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import base64, bz2, hashlib, json
+          from datetime import datetime, timezone
+          from pathlib import Path
+          source = Path('dist/TG_BTC_Arena_Companion_v7.3.0/tg_arena_bot.py')
+          raw = source.read_bytes()
+          encoded = base64.b64encode(bz2.compress(raw, compresslevel=9)).decode('ascii')
+          out = Path('release_payload/current_source_parts')
+          out.mkdir(parents=True, exist_ok=True)
+          for p in out.glob('part*.txt'):
+              p.unlink()
+          parts = []
+          for i in range(0, len(encoded), 20000):
+              name = f'part{i // 20000 + 1:02d}.txt'
+              (out / name).write_text(encoded[i:i+20000], encoding='utf-8')
+              parts.append(f'current_source_parts/{name}')
+          digest = hashlib.sha256(raw).hexdigest()
+          manifest = {
+              'version': '7.3.0',
+              'sha256': digest,
+              'bytes': len(raw),
+              'encoding': 'base64+bz2',
+              'parts': parts,
+          }
+          Path('release_payload/current_source_manifest.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
+          receipt = {
+              'version': '7.3.0',
+              'source_sha256': digest,
+              'source_bytes': len(raw),
+              'validated_at': datetime.now(timezone.utc).isoformat(),
+              'full_source_build': True,
+          }
+          Path('release_payload/LAST_BUILD.json').write_text(json.dumps(receipt, indent=2) + '\n', encoding='utf-8')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A release_payload/current_source_manifest.json release_payload/current_source_parts release_payload/LAST_BUILD.json
+          git commit -m "Publish V7.3 updater manifest and build receipt [skip ci]" || true
+          git push
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TG_BTC_Arena_Companion_v7.3.0
+          path: TG_BTC_Arena_Companion_v7.3.0.zip
+          if-no-files-found: error
+
+      - name: Publish GitHub Release 7.3.0
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          NOTES="$(cat release_payload/release_notes/v7.3.0.md)"
+          if gh release view 7.3.0 >/dev/null 2>&1; then
+            gh release upload 7.3.0 TG_BTC_Arena_Companion_v7.3.0.zip --clobber
+            gh release edit 7.3.0 --title "TG:BTC Game Assistant 7.3.0" --notes "$NOTES"
+          else
+            gh release create 7.3.0 TG_BTC_Arena_Companion_v7.3.0.zip \
+              --title "TG:BTC Game Assistant 7.3.0" \
+              --notes "$NOTES" \
+              --target main
+          fi
+
+      - name: Verify live release and write publication receipt
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release view 7.3.0 --json tagName,name,url,isDraft,isPrerelease,publishedAt,assets > /tmp/v730_release.json
+          python - <<'PY'
+          import hashlib, json
+          from datetime import datetime, timezone
+          from pathlib import Path
+          data = json.loads(Path('/tmp/v730_release.json').read_text(encoding='utf-8'))
+          assets = [a for a in (data.get('assets') or []) if a.get('name') == 'TG_BTC_Arena_Companion_v7.3.0.zip']
+          if len(assets) != 1:
+              raise SystemExit(f'Expected exactly one V7.3 ZIP, found {len(assets)}')
+          asset = assets[0]
+          if data.get('tagName') != '7.3.0' or data.get('isDraft') or data.get('isPrerelease'):
+              raise SystemExit('V7.3 release metadata invalid')
+          source = Path('dist/TG_BTC_Arena_Companion_v7.3.0/tg_arena_bot.py')
+          receipt = {
+              'version': '7.3.0',
+              'tag': data.get('tagName'),
+              'release_name': data.get('name'),
+              'release_url': data.get('url'),
+              'published_at': data.get('publishedAt'),
+              'verified_at': datetime.now(timezone.utc).isoformat(),
+              'is_draft': bool(data.get('isDraft')),
+              'is_prerelease': bool(data.get('isPrerelease')),
+              'asset_name': asset.get('name'),
+              'asset_bytes': int(asset.get('size') or 0),
+              'asset_url': asset.get('url'),
+              'source_sha256': hashlib.sha256(source.read_bytes()).hexdigest(),
+              'source_bytes': source.stat().st_size,
+          }
+          if receipt['asset_bytes'] <= 0:
+              raise SystemExit('V7.3 ZIP asset size invalid')
+          Path('release_payload/LAST_PUBLISHED.json').write_text(json.dumps(receipt, indent=2) + '\n', encoding='utf-8')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add release_payload/LAST_PUBLISHED.json
+          git commit -m "Record published V7.3 release [skip ci]" || true
+          git push
