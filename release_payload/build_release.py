@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic TG:BTC full-source release build entry point."""
+'''Deterministic TG:BTC full-source release build entry point.'''
 import base64
 import bz2
 import gzip
@@ -12,6 +12,9 @@ from pathlib import Path
 
 EXPECTED_BUILDER_SHA256 = "bf120e8e651ce0139cefa36e99d3f76f880b11941b863480708be6fb30107a8e"
 EXPECTED_PATCHED_SHA256 = "78f8ba945800eb390f9778a01b8d6ea38484a2d47b887b9544407f61465eafb7"
+V720_SOURCE_SHA256 = "8ea07afd9ba27e9040947fab82ee456e122ea48c37d24ca607c0b02747486a7c"
+V721_HOME_SOFT_LIMIT = 20.0
+
 root = Path(__file__).resolve().parent
 parts_dir = root / "build_release_v720_parts"
 parts = sorted(parts_dir.glob("part*.txt"))
@@ -38,19 +41,115 @@ patched_sha = hashlib.sha256(source.encode("utf-8")).hexdigest()
 if patched_sha != EXPECTED_PATCHED_SHA256:
     raise SystemExit(f"Patched release-builder checksum mismatch: {patched_sha}")
 
-try:
-    exec(compile(source, "build_release_v720.py", "exec"), globals(), globals())
-except SystemExit as exc:
-    if exc.code not in (None, 0):
-        raise
 
-
-def _cli_arg(flag):
+def _cli_arg(flag, argv=None):
+    args = sys.argv if argv is None else argv
     try:
-        i = sys.argv.index(flag)
-        return sys.argv[i + 1]
+        i = args.index(flag)
+        return args[i + 1]
     except (ValueError, IndexError):
         return None
+
+
+def _set_cli_arg(args, flag, value):
+    out = list(args)
+    try:
+        i = out.index(flag)
+    except ValueError:
+        out.extend([flag, value])
+    else:
+        if i + 1 >= len(out):
+            out.append(value)
+        else:
+            out[i + 1] = value
+    return out
+
+
+def _run_base_builder(builder_source):
+    requested_argv = list(sys.argv)
+    requested_version = str(_cli_arg("--version", requested_argv) or "").strip().lstrip("vV")
+    requested_output = _cli_arg("--output", requested_argv)
+    is_v721 = requested_version == "7.2.1"
+
+    temp_output = None
+    try:
+        if is_v721:
+            if not requested_output:
+                raise SystemExit("v7.2.1 build requires --output")
+            requested_path = Path(requested_output)
+            temp_output = requested_path.with_name(requested_path.name + ".v720base")
+            build_argv = _set_cli_arg(requested_argv, "--version", "7.2.0")
+            build_argv = _set_cli_arg(build_argv, "--output", str(temp_output))
+            sys.argv = build_argv
+        try:
+            exec(compile(builder_source, "build_release_v720.py", "exec"), globals(), globals())
+        except SystemExit as exc:
+            if exc.code not in (None, 0):
+                raise
+    finally:
+        sys.argv = requested_argv
+
+    if not is_v721:
+        return
+
+    if temp_output is None or not temp_output.exists():
+        raise SystemExit("v7.2.1 base source was not generated")
+
+    raw = temp_output.read_bytes()
+    base_sha = hashlib.sha256(raw).hexdigest()
+    if base_sha != V720_SOURCE_SHA256:
+        raise SystemExit(f"v7.2.1 base checksum mismatch: {base_sha}")
+
+    text = raw.decode("utf-8")
+    version_old = 'APP_VERSION = "7.2.0"'
+    version_new = 'APP_VERSION = "7.2.1"'
+    if text.count(version_old) != 1:
+        raise SystemExit(f"v7.2.1 version anchor expected one match, found {text.count(version_old)}")
+    text = text.replace(version_old, version_new, 1)
+
+    anchor_old = '''        if name in accepted:
+            ok = screen in accepted[name]
+            return ok, f"vision={screen} {conf:.0f}% • {detail}"
+        return True, "no anchor configured"
+'''
+    anchor_new = f'''        if name in accepted:
+            ok = screen in accepted[name]
+            # V7.2.1: HOME is the only screen allowed a bounded soft match.
+            # Live Home art/animation can shift its pHash farther than the
+            # recorded reference even though HOME remains the nearest screen.
+            if not ok and name == "HOME" and screen == "UNKNOWN":
+                match = re.search(r"nearest\\s+HOME\\s+d=([0-9.]+)", str(detail or ""))
+                if match:
+                    try:
+                        home_distance = float(match.group(1))
+                    except Exception:
+                        home_distance = 999.0
+                    if home_distance <= {V721_HOME_SOFT_LIMIT:.1f}:
+                        return True, (
+                            f"vision=HOME~ {{conf:.0f}}% • soft {{detail}} "
+                            f"(limit={V721_HOME_SOFT_LIMIT:.1f})"
+                        )
+            return ok, f"vision={{screen}} {{conf:.0f}}% • {{detail}}"
+        return True, "no anchor configured"
+'''
+    if text.count(anchor_old) != 1:
+        raise SystemExit(
+            f"v7.2.1 HOME anchor expected one match, found {text.count(anchor_old)}"
+        )
+    text = text.replace(anchor_old, anchor_new, 1)
+
+    requested_path = Path(requested_output)
+    requested_path.parent.mkdir(parents=True, exist_ok=True)
+    requested_path.write_text(text, encoding="utf-8", newline="\n")
+    temp_output.unlink(missing_ok=True)
+    final_raw = requested_path.read_bytes()
+    print(
+        f"Generated v7.2.1 HOME-tolerance hotfix: {len(final_raw)} bytes, "
+        f"sha256={hashlib.sha256(final_raw).hexdigest()}"
+    )
+
+
+_run_base_builder(source)
 
 
 def _write_current_source_manifest():
@@ -97,7 +196,11 @@ def _write_current_source_manifest():
     # Persist the fallback during real GitHub release builds. The release
     # workflow only triggers on VERSION/workflow changes, so this bot commit
     # does not recursively start another release run.
-    if os.environ.get("GITHUB_ACTIONS") == "true" and os.environ.get("GITHUB_EVENT_NAME") != "pull_request":
+    if (
+        os.environ.get("GITHUB_ACTIONS") == "true"
+        and os.environ.get("GITHUB_EVENT_NAME") != "pull_request"
+        and os.environ.get("TG_SKIP_MANIFEST_PUBLISH") != "1"
+    ):
         subprocess.run(["git", "config", "user.name", "github-actions[bot]"], check=True)
         subprocess.run([
             "git", "config", "user.email",
