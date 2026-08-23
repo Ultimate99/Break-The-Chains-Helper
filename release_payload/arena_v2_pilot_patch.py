@@ -5,7 +5,7 @@ import gzip
 import hashlib
 from pathlib import Path
 
-EXPECTED_SHA256 = "e9616e9d78495bc63d29775dcc83dcf91c4e5c9e50d80adfc105be52640e275f"
+EXPECTED_SHA256 = "8ddbc98bf9b4eb3fa465dac0d725965c902c49dcb51a54b4898c40efc8af7fb5"
 root = Path(__file__).resolve().parent
 parts_dir = root / "arena_v2_pilot_patch_parts"
 parts = sorted(parts_dir.glob("part*.txt"))
