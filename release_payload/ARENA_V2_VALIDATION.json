@@ -33,9 +33,21 @@
     "daily_no_android_back": true,
     "safe_action_literals": true,
     "idle_verified_fallback_preserved": true,
+    "perception_marker": true,
+    "perception_integration_marker": true,
+    "power_calibration_only": true,
+    "power_ocr_plausibility": true,
+    "power_persisted": true,
+    "hp_calibration_only": true,
+    "hp_structured_vector": true,
+    "catastrophic_requires_learned_risk": true,
+    "catastrophic_requires_full_hp": true,
+    "catastrophic_thresholds": true,
+    "catastrophic_still_confirmed": true,
     "required_methods": true,
     "arena_priority_order": true,
     "readable_pilot_patch": true,
-    "readable_daily_patch": true
+    "readable_daily_patch": true,
+    "readable_perception_patch": true
   }
 }
