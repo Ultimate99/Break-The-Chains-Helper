@@ -1,0 +1,30 @@
+name: Export Exact V7.3 Quality Source
+
+on:
+  push:
+    branches: [arena-v2]
+    paths: [".github/workflows/export_v73_quality_source.yml"]
+
+permissions:
+  contents: write
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: arena-v2
+      - name: Build, compile and export
+        env:
+          TG_SKIP_MANIFEST_PUBLISH: "1"
+        run: |
+          set -euo pipefail
+          python release_payload/build_release_v730.py --repo-root . --version 7.3.0 --output /tmp/v73.py
+          python -m py_compile /tmp/v73.py
+          cp /tmp/v73.py release_payload/debug_v730_quality_source.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add release_payload/debug_v730_quality_source.py
+          git commit -m "Export exact V7.3 quality source [skip ci]"
+          git push origin HEAD:arena-v2
