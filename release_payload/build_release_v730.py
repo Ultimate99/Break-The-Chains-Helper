@@ -21,6 +21,7 @@ from arena_v2_perception_ui_safety import apply_arena_perception_ui_safety_patch
 BASE_VERSION = "7.2.2"
 TARGET_VERSION = "7.3.0"
 BASE_SHA256 = "0f20427e63011263cf9c7bacb4d3e604175cd00dac29f218fecda665cc56f289"
+# Quality generation 5: learner + Pilot + Daily self-healing + Power/HP/events + guided UI.
 
 
 def main():
