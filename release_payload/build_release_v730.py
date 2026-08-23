@@ -15,6 +15,8 @@ from arena_v2_perception_core import apply_arena_perception_core_patch
 from arena_v2_perception_integration import apply_arena_perception_integration_patch
 from arena_v2_perception_events import apply_arena_perception_events_patch
 from arena_v2_perception_event_cleanup import apply_arena_perception_event_cleanup
+from arena_v2_perception_ui import apply_arena_perception_ui_patch
+from arena_v2_perception_ui_safety import apply_arena_perception_ui_safety_patch
 
 BASE_VERSION = "7.2.2"
 TARGET_VERSION = "7.3.0"
@@ -65,6 +67,8 @@ def main():
     text = apply_arena_perception_integration_patch(text)
     text = apply_arena_perception_events_patch(text)
     text = apply_arena_perception_event_cleanup(text)
+    text = apply_arena_perception_ui_patch(text)
+    text = apply_arena_perception_ui_safety_patch(text)
 
     output.write_text(text, encoding="utf-8", newline="\n")
     temp.unlink(missing_ok=True)
