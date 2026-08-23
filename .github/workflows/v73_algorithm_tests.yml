@@ -30,11 +30,21 @@ jobs:
         with:
           ref: arena-v2
 
+      - name: Install vision test runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check \
+            "numpy>=1.26,<3" \
+            "opencv-python-headless>=4.8,<5" \
+            "pytesseract>=0.3.10,<1"
+
       - name: Build exact source
         id: build
         shell: bash
         run: |
           set +e
+          rm -f release_payload/V73_ALGORITHM_TESTS.json
           python release_payload/build_release_v730.py \
             --repo-root . --version 7.3.0 --output /tmp/v73.py \
             > /tmp/v73_algorithm.log 2>&1
@@ -56,7 +66,7 @@ jobs:
           python release_payload/test_v730_algorithms.py \
             >> /tmp/v73_algorithm.log 2>&1
           RC=$?
-          tail -n 120 /tmp/v73_algorithm.log
+          tail -n 160 /tmp/v73_algorithm.log
           echo "rc=$RC" >> "$GITHUB_OUTPUT"
           exit 0
 
@@ -68,7 +78,7 @@ jobs:
           cp /tmp/v73_algorithm.log release_payload/V73_ALGORITHM_TESTS.log || true
           if [ ! -f release_payload/V73_ALGORITHM_TESTS.json ]; then
             python - <<'PY'
-          import json, os
+          import json
           from pathlib import Path
           Path('release_payload/V73_ALGORITHM_TESTS.json').write_text(
               json.dumps({
