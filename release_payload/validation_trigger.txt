@@ -1,2 +1,2 @@
 Validate deterministic v7.2.0 full-source patch against v7.1.2.
-Pass 4: all release-builder chunks verified by Git blob SHA.
+Pass 5: structural App.__init__ Vision anchor.
