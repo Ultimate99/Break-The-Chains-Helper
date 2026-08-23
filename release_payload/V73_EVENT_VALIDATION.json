@@ -1,0 +1,24 @@
+{
+  "version": "7.3.0-dev-events",
+  "passed": true,
+  "source_sha256": "5c53c0992d3b6d2a79984a9a6e1c9b0fedc935452221bcf0b2168ceb81e4bfe9",
+  "source_bytes": 430609,
+  "checks": {
+    "marker": true,
+    "event_dir": true,
+    "bounded_clusters": true,
+    "bounded_evidence": true,
+    "no_fake_label": true,
+    "dct_signature": true,
+    "change_gate": true,
+    "cooldown_gate": true,
+    "trace_cluster": true,
+    "hero_context": true,
+    "time_context": true,
+    "outcome_attribution": true,
+    "win_loss_stats": true,
+    "no_event_direct_quit": true,
+    "methods": true,
+    "no_dead_fake_capture": true
+  }
+}
