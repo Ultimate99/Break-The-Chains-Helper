@@ -1,0 +1,183 @@
+name: Test V7.3 Algorithms
+
+on:
+  push:
+    branches: [arena-v2]
+    paths:
+      - ".github/workflows/v73_algorithm_tests.yml"
+      - "release_payload/build_release_v730.py"
+      - "release_payload/arena_v2_perception_core.py"
+      - "release_payload/arena_v2_perception_adaptive.py"
+      - "release_payload/arena_v2_perception_events.py"
+      - "release_payload/arena_v2_pilot_patch.py"
+      - "release_payload/daily_v73_identify.py"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      TG_SKIP_MANIFEST_PUBLISH: "1"
+      APPDATA: /tmp/tgbtc-v73-profile
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: arena-v2
+      - name: Build exact source
+        run: |
+          set -euo pipefail
+          python release_payload/build_release_v730.py --repo-root . --version 7.3.0 --output /tmp/v73.py
+          python -m py_compile /tmp/v73.py
+      - name: Run synthetic algorithm tests
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import importlib.util, json, tempfile
+          from pathlib import Path
+          import numpy as np
+          import cv2
+
+          spec=importlib.util.spec_from_file_location('tgbtc_v73','/tmp/v73.py')
+          mod=importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(mod)
+          results={}
+
+          # ------------------------------------------------------
+          # HP bar estimator: full / half / critical synthetic bars.
+          # ------------------------------------------------------
+          def bar(fill):
+              img=np.zeros((24,200,3),dtype=np.uint8)
+              img[:]=(12,12,12)
+              px=max(0,min(200,int(round(200*fill))))
+              if px:
+                  img[:, :px]=(0,220,40)
+              return img
+          r100=mod._arena_bar_fill_ratio(bar(1.0),(0,0,200,24))
+          r50=mod._arena_bar_fill_ratio(bar(0.5),(0,0,200,24))
+          r10=mod._arena_bar_fill_ratio(bar(0.1),(0,0,200,24))
+          results['hp_readings']=[r100,r50,r10]
+          assert r100 is not None and 0.90 <= r100 <= 1.0, r100
+          assert r50 is not None and 0.42 <= r50 <= 0.60, r50
+          assert r10 is not None and 0.05 <= r10 <= 0.18, r10
+
+          # HP collapse can never act without learned risk and complete calibration.
+          original_hp=mod._arena_hp_snapshot
+          try:
+              mod._arena_hp_snapshot=lambda _ref:{
+                  'ally':[0.03,0.05,0.02], 'enemy':[0.80,0.70,0.65],
+                  'ally_avg':0.033, 'enemy_avg':0.716,
+                  'ally_alive':0, 'enemy_alive':3,
+              }
+              assert mod._arena_catastrophic_state(None,0.87)[0] is False
+              assert mod._arena_catastrophic_state(None,0.90)[0] is True
+              mod._arena_hp_snapshot=lambda _ref:{
+                  'ally':[0.03,0.05], 'enemy':[0.80,0.70,0.65],
+                  'ally_avg':0.04, 'enemy_avg':0.716,
+                  'ally_alive':0, 'enemy_alive':3,
+              }
+              assert mod._arena_catastrophic_state(None,0.99)[0] is False
+          finally:
+              mod._arena_hp_snapshot=original_hp
+          results['catastrophic_guard']=True
+
+          # ------------------------------------------------------
+          # Learned loss probability reacts to known WIN/LOSS centroids.
+          # ------------------------------------------------------
+          state=mod._arena_learning_default()
+          state['settings']['min_class_matches']=3
+          state['buckets']['0']={
+              'WIN':{'matches':4,'samples':20,'centroid':[0.0,0.0,0.0]},
+              'LOSS':{'matches':4,'samples':20,'centroid':[1.0,1.0,1.0]},
+          }
+          mod.arena_learning_state=state
+          p_loss,detail_loss=mod.arena_predict_loss([0.9,0.9,0.9],1.0,0)
+          p_win,detail_win=mod.arena_predict_loss([0.1,0.1,0.1],1.0,0)
+          results['loss_probs']=[p_loss,p_win]
+          assert p_loss is not None and p_win is not None
+          assert p_loss > 0.65, (p_loss,detail_loss)
+          assert p_win < 0.35, (p_win,detail_win)
+
+          # ------------------------------------------------------
+          # Pilot warm-up gate: not before 12 / 4W / 4L + 2 actions.
+          # ------------------------------------------------------
+          mod.strategy_settings=lambda:{'action_points':{'Skill A':[100,100],'Skill B':[200,200]}}
+          engine=mod.ArenaBotEngine()
+          mod.arena_learning_state=mod._arena_learning_default()
+          mod.arena_learning_state['stats'].update({'trained_matches':11,'wins':5,'losses':6})
+          ready,why=engine._pilot_ready()
+          assert ready is False, why
+          mod.arena_learning_state['stats'].update({'trained_matches':12,'wins':4,'losses':4})
+          ready,why=engine._pilot_ready()
+          assert ready is True, why
+          choice=engine._pilot_choose_action('0|LOW|BOT|none',['Skill A','Skill B'])
+          assert choice in {'Skill A','Skill B'}
+          results['pilot_gate']=why
+
+          # ------------------------------------------------------
+          # Event clustering: same signature -> same cluster; far -> new.
+          # Outcome is counted once per cluster per battle.
+          # ------------------------------------------------------
+          temp=Path(tempfile.mkdtemp(prefix='v73-events-'))
+          mod.ARENA_EVENT_DIR=temp/'events'; mod.ARENA_EVENT_DIR.mkdir(parents=True,exist_ok=True)
+          mod.ARENA_LEARNING_FILE=temp/'model.json'
+          mod.arena_learning_state=mod._arena_learning_default()
+          mod.opponent_move_roi=lambda:(0,0,200,100)
+          frame=np.zeros((100,200,3),dtype=np.uint8)
+          c1,new1,_=mod.arena_record_enemy_event(frame,0x0000000000000000,4.0,['Hero A'])
+          c1b,new1b,_=mod.arena_record_enemy_event(frame,0x0000000000000000,5.0,['Hero A'])
+          c2,new2,_=mod.arena_record_enemy_event(frame,0xFFFFFFFFFFFFFFFF,6.0,['Hero B'])
+          assert c1=='EVT-0001' and new1 is True
+          assert c1b==c1 and new1b is False
+          assert c2=='EVT-0002' and new2 is True
+          trace={'events':[{'kind':'enemy_event','cluster':c1},{'kind':'enemy_event','cluster':c1},{'kind':'enemy_event','cluster':c2}]}
+          mod.arena_apply_event_outcome(trace,'WIN')
+          clusters=mod.arena_learning_state['event_clusters']
+          assert clusters[c1]['matches']==1 and clusters[c1]['wins']==1
+          assert clusters[c2]['matches']==1 and clusters[c2]['wins']==1
+          assert clusters[c1]['label'] is None and clusters[c2]['label'] is None
+          results['event_clusters']=[c1,c2]
+
+          # DCT signature is deterministic for an unchanged frame.
+          sig1=mod._arena_event_signature(frame)
+          sig2=mod._arena_event_signature(frame.copy())
+          assert sig1 is not None and sig1==sig2
+          assert mod._arena_event_hamming(sig1,sig2)==0
+          results['event_signature']=f'{sig1:016x}'
+
+          # ------------------------------------------------------
+          # Adaptive Daily fingerprint persists and is reused.
+          # ------------------------------------------------------
+          adapt=temp/'vision_adaptive.json'
+          mod.VISION_ADAPTIVE_FILE=adapt
+          app=mod.App.__new__(mod.App)
+          app._vision_adaptive_cache=None
+          app.add_log=lambda _text: None
+          rng=np.random.default_rng(73)
+          live=rng.integers(0,256,size=(mod.REFERENCE_H,mod.REFERENCE_W,3),dtype=np.uint8)
+          learned=app._vision_learn_screen('MAIL',live,evidence='TEST')
+          duplicate=app._vision_learn_screen('MAIL',live.copy(),evidence='TEST')
+          assert learned is True and duplicate is False
+          assert adapt.exists()
+          saved=json.loads(adapt.read_text(encoding='utf-8'))
+          assert len(saved['screens']['MAIL'])==1
+          screen,conf,detail=app._vision_identify_screen(live)
+          assert screen=='MAIL' and conf >= 99.0, (screen,conf,detail)
+          results['daily_adaptive']=[screen,conf,detail]
+
+          Path('release_payload/V73_ALGORITHM_TESTS.json').write_text(
+              json.dumps({'version':'7.3.0-dev-algorithms','passed':True,'results':results},indent=2)+'\n',
+              encoding='utf-8'
+          )
+          print(json.dumps(results,indent=2))
+          PY
+      - name: Persist test receipt
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add release_payload/V73_ALGORITHM_TESTS.json
+          git commit -m "Record V7.3 algorithm tests [skip ci]" || true
+          git push origin HEAD:arena-v2 || true
