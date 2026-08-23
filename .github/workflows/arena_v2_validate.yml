@@ -19,17 +19,34 @@ jobs:
         with:
           ref: arena-v2
 
-      - name: Build and inspect v7.3.0 Arena V2 Pilot
+      - name: Build v7.3.0 and persist diagnostic log
         shell: bash
         env:
           TG_SKIP_MANIFEST_PUBLISH: "1"
         run: |
-          set -euo pipefail
+          set +e
           python release_payload/build_release_v730.py \
             --repo-root . \
             --version 7.3.0 \
-            --output /tmp/tg_arena_bot_v7_3_0.py
-          python -m py_compile /tmp/tg_arena_bot_v7_3_0.py
+            --output /tmp/tg_arena_bot_v7_3_0.py \
+            > /tmp/arena_v2_validation.log 2>&1
+          BUILD_RC=$?
+          if [ "$BUILD_RC" -eq 0 ]; then
+            python -m py_compile /tmp/tg_arena_bot_v7_3_0.py >> /tmp/arena_v2_validation.log 2>&1
+            BUILD_RC=$?
+          fi
+          cp /tmp/arena_v2_validation.log release_payload/ARENA_V2_VALIDATION_LOG.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add release_payload/ARENA_V2_VALIDATION_LOG.txt
+          git commit -m "Record Arena V2 Pilot build diagnostic [skip ci]" || true
+          git push origin HEAD:arena-v2 || true
+          exit "$BUILD_RC"
+
+      - name: Inspect Arena V2 Pilot
+        shell: bash
+        run: |
+          set -euo pipefail
           grep -F 'APP_VERSION = "7.3.0"' /tmp/tg_arena_bot_v7_3_0.py
           grep -F 'V7.3 Arena V2 Phase 1 — adaptive battle learning build marker' /tmp/tg_arena_bot_v7_3_0.py
           grep -F 'V7.3 Arena V2 Pilot — calibrated-action reinforcement controller build marker' /tmp/tg_arena_bot_v7_3_0.py
@@ -92,7 +109,6 @@ jobs:
               json.dumps(receipt, indent=2) + '\n', encoding='utf-8'
           )
           PY
-
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add release_payload/ARENA_V2_VALIDATION.json
