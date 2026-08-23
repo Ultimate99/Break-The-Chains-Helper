@@ -7,7 +7,11 @@ from pathlib import Path
 
 EXPECTED_SHA256 = "e9616e9d78495bc63d29775dcc83dcf91c4e5c9e50d80adfc105be52640e275f"
 root = Path(__file__).resolve().parent
-payload = (root / "arena_v2_pilot_patch_payload.txt").read_text(encoding="utf-8").strip()
+parts_dir = root / "arena_v2_pilot_patch_parts"
+parts = sorted(parts_dir.glob("part*.txt"))
+if not parts:
+    raise RuntimeError("Arena Pilot patch parts are missing")
+payload = "".join(p.read_text(encoding="utf-8").strip() for p in parts)
 source = gzip.decompress(base64.b64decode(payload))
 got = hashlib.sha256(source).hexdigest()
 if got != EXPECTED_SHA256:
