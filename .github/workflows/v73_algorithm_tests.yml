@@ -30,10 +30,12 @@ jobs:
         with:
           ref: arena-v2
 
-      - name: Install vision test runtime
+      - name: Install application test runtime
         shell: bash
         run: |
           set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends python3-tk
           python -m pip install --disable-pip-version-check \
             "numpy>=1.26,<3" \
             "opencv-python-headless>=4.8,<5" \
