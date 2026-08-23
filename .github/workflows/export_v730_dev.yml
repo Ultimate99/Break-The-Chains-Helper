@@ -1,0 +1,33 @@
+name: Export V7.3 dev source
+
+on:
+  push:
+    branches:
+      - arena-v2
+    paths:
+      - ".github/workflows/export_v730_dev.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: arena-v2
+      - name: Export exact generated v7.3 source
+        shell: bash
+        env:
+          TG_SKIP_MANIFEST_PUBLISH: "1"
+        run: |
+          set -euo pipefail
+          python release_payload/build_release_v730.py --repo-root . --version 7.3.0 --output /tmp/tg_arena_bot_v730.py
+          python -m py_compile /tmp/tg_arena_bot_v730.py
+          cp /tmp/tg_arena_bot_v730.py release_payload/debug_v730_source.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add release_payload/debug_v730_source.py
+          git commit -m "Export temporary V7.3 dev source [skip ci]"
+          git push origin HEAD:arena-v2
