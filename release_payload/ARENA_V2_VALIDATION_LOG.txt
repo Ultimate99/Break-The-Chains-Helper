@@ -1,10 +1,4 @@
-Traceback (most recent call last):
-  File "/home/runner/work/Break-The-Chains-Helper/Break-The-Chains-Helper/release_payload/build_release_v730.py", line 12, in <module>
-    from arena_v2_pilot_patch import apply_arena_v2_pilot_patch
-  File "/home/runner/work/Break-The-Chains-Helper/Break-The-Chains-Helper/release_payload/arena_v2_pilot_patch.py", line 15, in <module>
-    source = gzip.decompress(base64.b64decode(payload))
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.12/gzip.py", line 632, in decompress
-    decompressed = do.decompress(data[fp.tell():])
-                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-zlib.error: Error -3 while decompressing data: invalid distance too far back
+Built TG:BTC source v7.2.0: /tmp/tg_arena_bot_v7_3_0.py.v722base.v720base (362176 bytes) sha256=8ea07afd9ba27e9040947fab82ee456e122ea48c37d24ca607c0b02747486a7c
+Generated v7.2.2 hotfix: 363319 bytes, sha256=0f20427e63011263cf9c7bacb4d3e604175cd00dac29f218fecda665cc56f289
+Updater manifest ready: v7.2.2, 363319 bytes, sha256=0f20427e63011263cf9c7bacb4d3e604175cd00dac29f218fecda665cc56f289, parts=5
+Generated v7.3.0: 399190 bytes, sha256=50ec0367c9a53fb188a19433af7cfc015296d31f8ddd9458b552a30c4d1f9bbb

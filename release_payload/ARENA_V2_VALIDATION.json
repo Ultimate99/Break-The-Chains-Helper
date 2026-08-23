@@ -1,20 +1,29 @@
 {
-  "version": "7.3.0-dev-phase1",
-  "source_sha256": "de47eacdb548f3e80b6efcf568d1fbaf51d412f87df528d839b72bbacd9e7d5e",
-  "source_bytes": 381757,
+  "version": "7.3.0-dev-pilot",
+  "source_sha256": "50ec0367c9a53fb188a19433af7cfc015296d31f8ddd9458b552a30c4d1f9bbb",
+  "source_bytes": 399190,
   "compiled": true,
   "checks": {
     "app_version": true,
-    "learning_marker": true,
-    "learning_begin": true,
-    "learning_sample": true,
-    "learning_finish": true,
-    "adaptive_quit": true,
+    "phase1_learning": true,
+    "pilot_marker": true,
+    "pilot_12_match_gate": true,
+    "pilot_4w4l_gate": true,
+    "pilot_2_action_gate": true,
+    "pilot_no_effect_fallback": true,
+    "pilot_action_cap": true,
+    "calibrated_points_only": true,
+    "pilot_disables_auto": true,
+    "pilot_outcome_learning": true,
+    "pilot_visual_reward": true,
+    "adaptive_quit_preserved": true,
     "home_hotfix_preserved": true,
     "route_hotfix_preserved": true,
-    "auto_bootstrap_logged": true,
-    "trace_file": true,
-    "model_file": true
-  },
-  "validated_at": "2026-08-23T16:42:56.586161+00:00"
+    "auto_bootstrap_preserved": true,
+    "persistent_trace": true,
+    "persistent_model": true,
+    "pilot_methods": true,
+    "priority_order": true,
+    "readable_pilot_patch": true
+  }
 }
