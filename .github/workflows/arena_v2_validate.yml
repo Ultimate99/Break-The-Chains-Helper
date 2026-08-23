@@ -1,4 +1,5 @@
 name: Validate Arena V2 Pilot
+# validation generation 2: checksum-chunked Pilot payload
 
 on:
   push:
