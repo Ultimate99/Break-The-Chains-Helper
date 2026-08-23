@@ -1,0 +1,189 @@
+name: Final Deploy V7.3.0
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "release_payload/v730_final_trigger.txt"
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout production main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Build and pin deterministic source
+        env:
+          TG_SKIP_MANIFEST_PUBLISH: "1"
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(tr -d '[:space:]' < VERSION)" = "7.3.0"
+          mkdir -p dist/TG_BTC_Arena_Companion_v7.3.0
+          python release_payload/build_release_v730.py \
+            --repo-root . \
+            --version 7.3.0 \
+            --output dist/TG_BTC_Arena_Companion_v7.3.0/tg_arena_bot.py
+          python -m py_compile dist/TG_BTC_Arena_Companion_v7.3.0/tg_arena_bot.py
+          python - <<'PY'
+          import hashlib
+          from pathlib import Path
+          p=Path('dist/TG_BTC_Arena_Companion_v7.3.0/tg_arena_bot.py')
+          raw=p.read_bytes()
+          expected='bc95436b0d63e573a6024bfa510a652ea61d9ed1f7c95369e646eb2a9e96ed81'
+          got=hashlib.sha256(raw).hexdigest()
+          assert got == expected, (got, expected)
+          assert len(raw) == 448036, len(raw)
+          print(f'PINNED SOURCE PASS: {len(raw)} bytes sha256={got}')
+          PY
+
+      - name: Structural safety gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import ast, json
+          from pathlib import Path
+          p=Path('dist/TG_BTC_Arena_Companion_v7.3.0/tg_arena_bot.py')
+          text=p.read_text(encoding='utf-8')
+          tree=ast.parse(text)
+          methods={n.name for n in ast.walk(tree) if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef))}
+          checks={
+            'version': text.count('APP_VERSION = "7.3.0"') == 1,
+            'learner': 'arena_learning_model.json' in text and 'arena_battle_trace.jsonl' in text,
+            'pilot_gate': all(x in text for x in ['"pilot_min_trained_matches": 12','"pilot_min_wins": 4','"pilot_min_losses": 4','"pilot_min_actions": 2']),
+            'pilot_failsafe': '"pilot_no_effect_fallback": 3' in text and '"pilot_max_actions_per_match": 50' in text,
+            'pilot_calibrated_only': '_arena_pilot_valid_points' in methods,
+            'adaptive_quit': 'arena_adaptive_quit_ready' in methods,
+            'daily_adaptive': 'vision_adaptive.json' in text and '_vision_learn_screen' in methods,
+            'daily_ocr_recovery': '_daily_ocr_recognize_screen' in methods and 'No unverified navigation was attempted.' in text,
+            'no_android_back': 'KEYCODE_BACK' not in text and 'keyevent 4' not in text,
+            'safe_daily_actions': all(x in text for x in ['"CLAIM ALL"','"CLAIM"','"FREE"']),
+            'idle_guard': 'idle_ok,idle_detail=self._daily_anchor_check("IDLE_POPUP",ref)' in text,
+            'power': 'extract_power_value' in methods,
+            'hp': '_arena_hp_snapshot' in methods and '_arena_bar_fill_ratio' in methods,
+            'catastrophic_guard': '_arena_catastrophic_state' in methods,
+            'enemy_event_memory': 'arena_record_enemy_event' in methods and 'arena_apply_event_outcome' in methods,
+            'event_signature': '_arena_event_signature' in methods,
+          }
+          if not all(checks.values()):
+              raise SystemExit(json.dumps(checks,indent=2))
+          Path('/tmp/v73_structural.json').write_text(json.dumps(checks,indent=2)+'\n',encoding='utf-8')
+          print(json.dumps(checks,indent=2))
+          PY
+
+      - name: Install regression-test runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq python3-tk
+          python -m pip install --disable-pip-version-check --quiet numpy opencv-python-headless
+
+      - name: Run algorithm and persistence tests
+        env:
+          APPDATA: /tmp/tgbtc-v73-profile
+          V73_SOURCE: dist/TG_BTC_Arena_Companion_v7.3.0/tg_arena_bot.py
+          V73_ALGORITHM_RECEIPT: /tmp/V73_ALGORITHM_TESTS.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$APPDATA"
+          mkdir -p "$APPDATA"
+          python release_payload/test_v730_algorithms.py
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          data=json.loads(Path('/tmp/V73_ALGORITHM_TESTS.json').read_text(encoding='utf-8'))
+          assert data.get('passed') is True, data
+          print('ALGORITHM / PERSISTENCE SUITE PASS')
+          PY
+
+      - name: Package and generate updater payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd dist && zip -qr ../TG_BTC_Arena_Companion_v7.3.0.zip TG_BTC_Arena_Companion_v7.3.0)
+          python - <<'PY'
+          import base64,bz2,hashlib,json
+          from datetime import datetime,timezone
+          from pathlib import Path
+          source=Path('dist/TG_BTC_Arena_Companion_v7.3.0/tg_arena_bot.py')
+          raw=source.read_bytes(); digest=hashlib.sha256(raw).hexdigest()
+          structural=json.loads(Path('/tmp/v73_structural.json').read_text(encoding='utf-8'))
+          algorithms=json.loads(Path('/tmp/V73_ALGORITHM_TESTS.json').read_text(encoding='utf-8'))
+          encoded=base64.b64encode(bz2.compress(raw,compresslevel=9)).decode('ascii')
+          out=Path('release_payload/current_source_parts'); out.mkdir(parents=True,exist_ok=True)
+          for p in out.glob('part*.txt'): p.unlink()
+          parts=[]
+          for i in range(0,len(encoded),20000):
+              name=f'part{i//20000+1:02d}.txt'; (out/name).write_text(encoded[i:i+20000],encoding='utf-8'); parts.append(f'current_source_parts/{name}')
+          manifest={'version':'7.3.0','sha256':digest,'bytes':len(raw),'encoding':'base64+bz2','parts':parts}
+          Path('release_payload/current_source_manifest.json').write_text(json.dumps(manifest,indent=2)+'\n',encoding='utf-8')
+          receipt={'version':'7.3.0','source_sha256':digest,'source_bytes':len(raw),'validated_at':datetime.now(timezone.utc).isoformat(),'full_source_build':True,'deployment_path':'final-pr-gate','structural_checks':structural,'algorithm_tests_passed':bool(algorithms.get('passed'))}
+          Path('release_payload/V73_PRODUCTION_VALIDATION.json').write_text(json.dumps(receipt,indent=2)+'\n',encoding='utf-8')
+          Path('release_payload/LAST_BUILD.json').write_text(json.dumps(receipt,indent=2)+'\n',encoding='utf-8')
+          print(f'UPDATER PAYLOAD PASS: {len(parts)} parts sha256={digest}')
+          PY
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          NOTES=release_payload/release_notes/v7.3.0.md
+          if gh release view 7.3.0 >/dev/null 2>&1; then
+            gh release upload 7.3.0 TG_BTC_Arena_Companion_v7.3.0.zip --clobber
+            gh release edit 7.3.0 --title "TG:BTC Game Assistant 7.3.0" --notes-file "$NOTES"
+          else
+            gh release create 7.3.0 TG_BTC_Arena_Companion_v7.3.0.zip --title "TG:BTC Game Assistant 7.3.0" --notes-file "$NOTES" --target main
+          fi
+
+      - name: Verify release asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release view 7.3.0 --json tagName,name,url,isDraft,isPrerelease,publishedAt,assets > /tmp/release.json
+          python - <<'PY'
+          import hashlib,json
+          from datetime import datetime,timezone
+          from pathlib import Path
+          data=json.loads(Path('/tmp/release.json').read_text(encoding='utf-8'))
+          assets=[a for a in data.get('assets',[]) if a.get('name')=='TG_BTC_Arena_Companion_v7.3.0.zip']
+          assert data.get('tagName')=='7.3.0',data
+          assert not data.get('isDraft') and not data.get('isPrerelease'),data
+          assert len(assets)==1 and int(assets[0].get('size') or 0)>0,assets
+          raw=Path('dist/TG_BTC_Arena_Companion_v7.3.0/tg_arena_bot.py').read_bytes()
+          receipt={'version':'7.3.0','tag':'7.3.0','release_name':data.get('name'),'release_url':data.get('url'),'published_at':data.get('publishedAt'),'verified_at':datetime.now(timezone.utc).isoformat(),'is_draft':False,'is_prerelease':False,'asset_name':assets[0].get('name'),'asset_bytes':int(assets[0].get('size') or 0),'asset_url':assets[0].get('url'),'source_sha256':hashlib.sha256(raw).hexdigest(),'source_bytes':len(raw),'deployment_path':'final-pr-gate'}
+          Path('release_payload/LAST_PUBLISHED.json').write_text(json.dumps(receipt,indent=2)+'\n',encoding='utf-8')
+          print(json.dumps(receipt,indent=2))
+          PY
+
+      - name: Commit verified updater payload to main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A release_payload/current_source_manifest.json release_payload/current_source_parts release_payload/LAST_BUILD.json release_payload/LAST_PUBLISHED.json release_payload/V73_PRODUCTION_VALIDATION.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Deploy verified V7.3.0 [skip ci]"
+            git push origin HEAD:main
+          fi
+
+      - name: Upload CI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TG_BTC_Arena_Companion_v7.3.0
+          path: TG_BTC_Arena_Companion_v7.3.0.zip
+          if-no-files-found: error
