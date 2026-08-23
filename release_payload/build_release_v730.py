@@ -11,6 +11,8 @@ from pathlib import Path
 from arena_v2_patch import apply_arena_v2_patch
 from arena_v2_pilot_patch import apply_arena_v2_pilot_patch
 from daily_v73_patch import apply_daily_v73_patch
+from arena_v2_perception_core import apply_arena_perception_core_patch
+from arena_v2_perception_integration import apply_arena_perception_integration_patch
 
 BASE_VERSION = "7.2.2"
 TARGET_VERSION = "7.3.0"
@@ -57,6 +59,8 @@ def main():
     text = apply_arena_v2_patch(text)
     text = apply_arena_v2_pilot_patch(text)
     text = apply_daily_v73_patch(text)
+    text = apply_arena_perception_core_patch(text)
+    text = apply_arena_perception_integration_patch(text)
 
     output.write_text(text, encoding="utf-8", newline="\n")
     temp.unlink(missing_ok=True)
