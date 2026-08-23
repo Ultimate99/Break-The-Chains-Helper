@@ -1,0 +1,15 @@
+{
+  "version": "7.2.2",
+  "source_sha256": "0f20427e63011263cf9c7bacb4d3e604175cd00dac29f218fecda665cc56f289",
+  "source_bytes": 363319,
+  "compiled": true,
+  "checks": {
+    "app_version": true,
+    "home_hotfix_preserved": true,
+    "route_hotfix_marker": true,
+    "route_settle_2_40": true,
+    "old_route_timeout_removed": true,
+    "mail_strict_threshold_preserved": true
+  },
+  "validated_at": "2026-08-23T13:06:30.240400+00:00"
+}
