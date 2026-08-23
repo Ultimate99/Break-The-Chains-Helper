@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 from arena_v2_patch import apply_arena_v2_patch
+from arena_v2_pilot_patch import apply_arena_v2_pilot_patch
 
 BASE_VERSION = "7.2.2"
 TARGET_VERSION = "7.3.0"
@@ -53,6 +54,7 @@ def main():
         raise SystemExit(f"Version anchor expected one match, found {text.count(old_version)}")
     text = text.replace(old_version, new_version, 1)
     text = apply_arena_v2_patch(text)
+    text = apply_arena_v2_pilot_patch(text)
 
     output.write_text(text, encoding="utf-8", newline="\n")
     temp.unlink(missing_ok=True)
