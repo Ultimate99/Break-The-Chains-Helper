@@ -10,11 +10,17 @@ on:
       - "release_payload/arena_v2_patch.py"
       - "release_payload/arena_v2_patch_payload.txt"
       - "release_payload/arena_v2_pilot_patch.py"
+      - "release_payload/arena_v2_perception_core.py"
+      - "release_payload/arena_v2_perception_integration.py"
+      - "release_payload/arena_v2_perception_events.py"
+      - "release_payload/arena_v2_perception_ui.py"
       - "release_payload/daily_v73_patch.py"
       - "release_payload/daily_v73_core.py"
       - "release_payload/daily_v73_identify.py"
       - "release_payload/daily_v73_anchor.py"
-      - "release_payload/daily_v73_recovery.py"
+      - "release_payload/daily_v73_start.py"
+      - "release_payload/daily_v73_route.py"
+      - "release_payload/daily_v73_finish.py"
   workflow_dispatch:
 
 permissions:
@@ -81,6 +87,7 @@ jobs:
               'auto_bootstrap_preserved': text.count('self._learning_note_action("ENABLE_AUTO", "bootstrap")') == 1,
               'persistent_trace': text.count('arena_battle_trace.jsonl') == 1,
               'persistent_model': text.count('arena_learning_model.json') == 1,
+
               'daily_marker': text.count('V7.3 Daily Self-Healing Vision — OCR-verified adaptive fingerprints + bounded recovery build marker') == 1,
               'daily_adaptive_file': text.count('VISION_ADAPTIVE_FILE = PROFILE_DIR / "vision_adaptive.json"') == 1,
               'daily_adaptive_learning': 'def _vision_learn_screen(self, name, ref, evidence="OCR"):' in text,
@@ -92,6 +99,18 @@ jobs:
               'daily_no_android_back': 'KEYCODE_BACK' not in text and 'keyevent 4' not in text,
               'safe_action_literals': all(token in text for token in ['"CLAIM ALL"', '"CLAIM"', '"FREE"']),
               'idle_verified_fallback_preserved': 'idle_ok,idle_detail=self._daily_anchor_check("IDLE_POPUP",ref)' in text,
+
+              'perception_marker': text.count('V7.3 Arena Structured Perception — calibrated Power + HP features build marker') == 1,
+              'perception_integration_marker': text.count('V7.3 Arena Perception Integration — Power persisted in intel/history/trace build marker') == 1,
+              'power_calibration_only': '"power_roi": None' in text and 'def opponent_power_roi():' in text,
+              'power_ocr_plausibility': '100 <= value <= 999_999_999' in text,
+              'power_persisted': '"opponent_power": opponent_power' in text and 'session["current_opponent_power"] = intel.get("power")' in text,
+              'hp_calibration_only': '"ally_hp_rois": []' in text and '"enemy_hp_rois": []' in text,
+              'hp_structured_vector': 'structured = np.array(_arena_structured_battle_features(ref_screen), dtype=np.float32)' in text,
+              'catastrophic_requires_learned_risk': 'if learned_probability is None or float(learned_probability) < 0.88:' in text,
+              'catastrophic_requires_full_hp': 'if len(ally) < 3 or len(enemy) < 3:' in text,
+              'catastrophic_thresholds': 'ally_avg <= 0.14' in text and 'enemy_avg >= 0.50' in text,
+              'catastrophic_still_confirmed': 'probability = max(float(probability), 0.975)' in text and 'confirm_needed = max(1, int(settings.get("confirm_samples") or 2))' in text,
           }
 
           method_names = {
@@ -103,7 +122,9 @@ jobs:
               '_pilot_update_pending', '_pilot_step', '_pilot_finish',
               '_validate_pilot_health', '_vision_adaptive_state',
               '_vision_learn_screen', '_daily_ocr_recognize_screen',
-              '_daily_save_failure_frame',
+              '_daily_save_failure_frame', 'read_opponent_power',
+              '_arena_bar_fill_ratio', '_arena_hp_snapshot',
+              '_arena_structured_battle_features', '_arena_catastrophic_state',
           }
           checks['required_methods'] = required_methods.issubset(method_names)
 
@@ -121,6 +142,8 @@ jobs:
           )
           daily_wrapper = Path('release_payload/daily_v73_patch.py').read_text(encoding='utf-8')
           checks['readable_daily_patch'] = 'gzip.decompress' not in daily_wrapper and 'apply_daily_v73_patch' in daily_wrapper
+          perception_patch = Path('release_payload/arena_v2_perception_core.py').read_text(encoding='utf-8')
+          checks['readable_perception_patch'] = 'gzip.decompress' not in perception_patch and 'apply_arena_perception_core_patch' in perception_patch
 
           if not all(checks.values()):
               raise SystemExit('V7.3 structural validation failed: ' + json.dumps(checks, indent=2))
@@ -129,7 +152,7 @@ jobs:
           wanted = {
               '_arena_time_bucket', '_arena_pilot_context',
               '_arena_pilot_node', '_arena_pilot_score',
-              '_daily_screen_token_rules',
+              '_daily_screen_token_rules', 'extract_power_value',
           }
           selected = []
           for node in ast.walk(tree):
@@ -138,6 +161,7 @@ jobs:
                   clone.decorator_list = []
                   selected.append(clone)
           ns = {
+              're': __import__('re'),
               'normalize_daily_word': lambda value: ' '.join(
                   ''.join(ch if (ch.isalpha() or ch == ' ') else ' ' for ch in str(value or '').upper()).split()
               )
@@ -158,6 +182,11 @@ jobs:
           assert screen_rule('EVENT') == 'EVENT'
           assert screen_rule('HOME COMBAT PVP') is None
           assert screen_rule('IDLE REWARDS') is None
+          power = ns['extract_power_value']
+          assert power('Power 123,456') == 123456
+          assert power('CP: 98 765') == 98765
+          assert power('abc') is None
+          assert power('12') is None
 
           raw = p.read_bytes()
           receipt = {
