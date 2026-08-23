@@ -1,0 +1,20 @@
+{
+  "version": "7.3.0-dev-phase1",
+  "source_sha256": "de47eacdb548f3e80b6efcf568d1fbaf51d412f87df528d839b72bbacd9e7d5e",
+  "source_bytes": 381757,
+  "compiled": true,
+  "checks": {
+    "app_version": true,
+    "learning_marker": true,
+    "learning_begin": true,
+    "learning_sample": true,
+    "learning_finish": true,
+    "adaptive_quit": true,
+    "home_hotfix_preserved": true,
+    "route_hotfix_preserved": true,
+    "auto_bootstrap_logged": true,
+    "trace_file": true,
+    "model_file": true
+  },
+  "validated_at": "2026-08-23T16:42:56.586161+00:00"
+}
