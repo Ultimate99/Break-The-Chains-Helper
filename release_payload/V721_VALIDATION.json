@@ -1,0 +1,13 @@
+{
+  "version": "7.2.1",
+  "source_sha256": "b3d3cdea0fbca870643336ff0ac8bb442ac2e3ffcb26c7b179d4b4264fd46321",
+  "source_bytes": 362984,
+  "compiled": true,
+  "checks": {
+    "app_version": true,
+    "home_hotfix_marker": true,
+    "home_limit": true,
+    "strict_other_screens_preserved": true
+  },
+  "validated_at": "2026-08-23T12:59:03.448311+00:00"
+}
