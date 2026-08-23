@@ -15,6 +15,6 @@ Traceback (most recent call last):
     spec.loader.exec_module(module)
   File "<frozen importlib._bootstrap_external>", line 995, in exec_module
   File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
-  File "/tmp/v73.py", line 21, in <module>
-    import tkinter as tk
-ModuleNotFoundError: No module named 'tkinter'
+  File "/tmp/v73.py", line 24, in <module>
+    from vision_stream import VisionStream, AdbTapShell, find_ffmpeg, query_device_size
+ModuleNotFoundError: No module named 'vision_stream'
