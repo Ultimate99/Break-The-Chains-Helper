@@ -1,27 +1,24 @@
-# TG:BTC Game Assistant 7.1.1 — Fast Daily + Verified Home Retry
+# TG:BTC Game Assistant 7.1.2 — Turbo Daily + Updater Fix
 
-Daily Assistant responsiveness and return-to-Home reliability update.
+## Much faster Daily Assistant
+- Safe-action OCR is now about 3–5x faster on the recorded TG:BTC screens by recognizing on a scaled frame and mapping taps back to the full reference canvas.
+- Daily navigation reacts to the first changed Fast Vision frame instead of sitting through long fixed delays.
+- Daily Fast Vision targets 24 FPS and keeps warming in the background if Android's encoder starts slowly.
+- HOME and Idle Farming verification use visual fingerprints and no longer invoke unnecessary OCR.
+- Duplicate route verification and normal-run debug PNG writes were removed from the hot path.
+- Shop and Quest Pass tab traversal is frame-driven instead of repeatedly waiting on multi-second OCR loops.
 
-## Faster Daily actions
-- Daily Assistant now starts its own low-latency Fast Vision stream while Arena grinding is stopped.
-- Uses a persistent ADB tap shell for Daily navigation/actions instead of launching a new adb process for each tap.
-- Screen checks use the latest streamed frame when available instead of multi-second raw screencaps.
-- Reduced fixed post-tap waits; route/screen verification still guards transitions.
-- Automatically falls back to normal screencap/process taps if Fast Vision or the persistent shell is unavailable.
-- Daily-only transport is stopped before Arena starts, so the Arena engine remains isolated.
+## Verified Home retry
+- Every automated return Home verifies that the Home screen is actually visible.
+- If Home is not visible, the assistant repeats the Home action automatically, up to 4 verified attempts.
+- Daily Assistant still never sends Android Back.
 
-## Home return reliability
-- Returning Home now verifies that the Home screen is actually visible.
-- If Home is not visible after the first Home tap, the assistant repeats the Home action automatically.
-- Up to 4 verified attempts are made before reporting `HOME FAIL`.
-- If Home is already visible, no extra Home tap is sent.
-- Android Back is still never used by Daily Assistant.
+## Updater reliability
+- Fixes the misleading `Installed v7.1.0 / Latest v7.1.0` state by publishing this build through the normal GitHub Release channel used by existing installations.
+- From v7.1.2 onward, the built-in checker also compares GitHub Releases with `main/VERSION` so a delayed Release cannot hide a newer build.
+- When main is newer than Releases, the app can reconstruct and SHA-validate the full source from a source manifest.
 
 ## Preserved
-- Safe-action policy: only explicit CLAIM / CLAIM ALL / FREE targets.
-- V7.1 screen anchors, Run All Safe, summaries, route teaching, and debug captures.
-- User AppData profile/history/calibrations remain untouched by updates.
-
-This release uses a deterministic checksum-verified delta from the exact v7.1.0 full-source build.
-
-Release workflow retriggered through a normal PR merge so the published GitHub Release is visible to the built-in updater.
+- Explicit `CLAIM / CLAIM ALL / FREE` safe-action policy.
+- Run All Safe, individual Daily modules, DRY RUN, STOP, routes, summaries, Arena, Smart Dodge, Intelligence and Strategy.
+- AppData profile/history/calibration data remains untouched.
