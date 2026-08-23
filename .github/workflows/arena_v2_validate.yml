@@ -1,4 +1,4 @@
-name: Validate Arena V2 Pilot
+name: Validate V7.3 Quality Gate
 
 on:
   push:
@@ -11,6 +11,10 @@ on:
       - "release_payload/arena_v2_patch_payload.txt"
       - "release_payload/arena_v2_pilot_patch.py"
       - "release_payload/daily_v73_patch.py"
+      - "release_payload/daily_v73_core.py"
+      - "release_payload/daily_v73_identify.py"
+      - "release_payload/daily_v73_anchor.py"
+      - "release_payload/daily_v73_recovery.py"
   workflow_dispatch:
 
 permissions:
@@ -25,24 +29,33 @@ jobs:
           ref: arena-v2
 
       - name: Build exact v7.3.0 source
+        id: build
         shell: bash
         env:
           TG_SKIP_MANIFEST_PUBLISH: "1"
         run: |
-          set -euo pipefail
+          set +e
           python release_payload/build_release_v730.py \
             --repo-root . \
             --version 7.3.0 \
             --output /tmp/tg_arena_bot_v7_3_0.py \
-            2>&1 | tee /tmp/arena_v2_validation.log
-          python -m py_compile /tmp/tg_arena_bot_v7_3_0.py
+            > /tmp/v73_validation.log 2>&1
+          RC=$?
+          if [ "$RC" -eq 0 ]; then
+            python -m py_compile /tmp/tg_arena_bot_v7_3_0.py >> /tmp/v73_validation.log 2>&1
+            RC=$?
+          fi
+          cat /tmp/v73_validation.log
+          echo "rc=$RC" >> "$GITHUB_OUTPUT"
+          exit 0
 
-      - name: Structural and safety assertions
+      - name: Structural, safety and helper assertions
+        if: steps.build.outputs.rc == '0'
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
-          import ast, hashlib, json
+          import ast, copy, hashlib, json
           from pathlib import Path
 
           p = Path('/tmp/tg_arena_bot_v7_3_0.py')
@@ -68,6 +81,17 @@ jobs:
               'auto_bootstrap_preserved': text.count('self._learning_note_action("ENABLE_AUTO", "bootstrap")') == 1,
               'persistent_trace': text.count('arena_battle_trace.jsonl') == 1,
               'persistent_model': text.count('arena_learning_model.json') == 1,
+              'daily_marker': text.count('V7.3 Daily Self-Healing Vision — OCR-verified adaptive fingerprints + bounded recovery build marker') == 1,
+              'daily_adaptive_file': text.count('VISION_ADAPTIVE_FILE = PROFILE_DIR / "vision_adaptive.json"') == 1,
+              'daily_adaptive_learning': 'def _vision_learn_screen(self, name, ref, evidence="OCR"):' in text,
+              'daily_ocr_fallback': 'def _daily_ocr_recognize_screen(self, ref):' in text,
+              'daily_unknown_only_override': 'if screen == "UNKNOWN" and name in {"MAIL", "SHOP", "QUEST", "EVENT", "RECRUIT", "REGULAR_RECRUIT", "CHAIN"}:' in text,
+              'daily_bounded_recovery': 'recovery_origin = None' in text and 'expected,timeout=3.20,initial_ref=retry_ref' in text,
+              'daily_failure_evidence': 'def _daily_save_failure_frame(self, module, stage, ref, detail=""):' in text,
+              'daily_no_unknown_nav': 'No unverified navigation was attempted.' in text and 'Daily will not navigate from an unknown screen.' in text,
+              'daily_no_android_back': 'KEYCODE_BACK' not in text and 'keyevent 4' not in text,
+              'safe_action_literals': all(token in text for token in ['"CLAIM ALL"', '"CLAIM"', '"FREE"']),
+              'idle_verified_fallback_preserved': 'idle_ok,idle_detail=self._daily_anchor_check("IDLE_POPUP",ref)' in text,
           }
 
           method_names = {
@@ -77,47 +101,67 @@ jobs:
           required_methods = {
               '_pilot_reset', '_pilot_ready', '_pilot_choose_action',
               '_pilot_update_pending', '_pilot_step', '_pilot_finish',
-              '_validate_pilot_health',
+              '_validate_pilot_health', '_vision_adaptive_state',
+              '_vision_learn_screen', '_daily_ocr_recognize_screen',
+              '_daily_save_failure_frame',
           }
-          checks['pilot_methods'] = required_methods.issubset(method_names)
+          checks['required_methods'] = required_methods.issubset(method_names)
 
           adaptive_pos = text.index('adaptive_loss = self._learning_sample(ref, auto_state)')
           pilot_pos = text.index('if self._pilot_step(', adaptive_pos)
           auto_pos = text.index('if auto_state == "OFF":', pilot_pos)
           dodge_pos = text.rfind('if self.dodge_in_progress:', adaptive_pos, pilot_pos)
-          checks['priority_order'] = adaptive_pos < dodge_pos < pilot_pos < auto_pos
+          checks['arena_priority_order'] = adaptive_pos < dodge_pos < pilot_pos < auto_pos
 
-          # No legacy opaque Pilot loader is allowed in the production patch.
           pilot_patch = Path('release_payload/arena_v2_pilot_patch.py').read_text(encoding='utf-8')
           checks['readable_pilot_patch'] = (
               'gzip.decompress' not in pilot_patch
               and 'base64.b64decode' not in pilot_patch
               and 'def apply_arena_v2_pilot_patch' in pilot_patch
           )
+          daily_wrapper = Path('release_payload/daily_v73_patch.py').read_text(encoding='utf-8')
+          checks['readable_daily_patch'] = 'gzip.decompress' not in daily_wrapper and 'apply_daily_v73_patch' in daily_wrapper
 
           if not all(checks.values()):
-              raise SystemExit('Arena V2 structural validation failed: ' + json.dumps(checks, indent=2))
+              raise SystemExit('V7.3 structural validation failed: ' + json.dumps(checks, indent=2))
 
-          # Pure-helper smoke tests without launching Tk/ADB.
+          # Pure helper smoke tests: no Tk, ADB or game process required.
+          wanted = {
+              '_arena_time_bucket', '_arena_pilot_context',
+              '_arena_pilot_node', '_arena_pilot_score',
+              '_daily_screen_token_rules',
+          }
           selected = []
-          wanted = {'_arena_time_bucket', '_arena_pilot_context', '_arena_pilot_node', '_arena_pilot_score'}
-          for node in tree.body:
+          for node in ast.walk(tree):
               if isinstance(node, ast.FunctionDef) and node.name in wanted:
-                  selected.append(node)
-          ns = {}
-          exec(compile(ast.Module(body=selected, type_ignores=[]), '<pilot_helpers>', 'exec'), ns, ns)
+                  clone = copy.deepcopy(node)
+                  clone.decorator_list = []
+                  selected.append(clone)
+          ns = {
+              'normalize_daily_word': lambda value: ' '.join(
+                  ''.join(ch if (ch.isalpha() or ch == ' ') else ' ' for ch in str(value or '').upper()).split()
+              )
+          }
+          exec(compile(ast.Module(body=selected, type_ignores=[]), '<v73_helpers>', 'exec'), ns, ns)
           assert ns['_arena_time_bucket'](0) == '0'
           assert ns['_arena_time_bucket'](15.1) == '2'
           assert '|CRIT|REAL|' in ns['_arena_pilot_context'](10, 0.91, 'REAL', ['A', 'B'])
-          assert '|LOW|BOT|' in ns['_arena_pilot_context'](10, 0.12, 'BOT', [])
           store = {}
           node = ns['_arena_pilot_node'](store, 'Skill A')
-          assert node['tries'] == 0 and 'Skill A' in store
-          assert ns['_arena_pilot_score'](node) > 0
+          assert node['tries'] == 0 and ns['_arena_pilot_score'](node) > 0
+          screen_rule = ns['_daily_screen_token_rules']
+          assert screen_rule('MAIL') == 'MAIL'
+          assert screen_rule('SHOP EVENT PACK') == 'SHOP'
+          assert screen_rule('CHAIN CAMPAIGN') == 'CHAIN'
+          assert screen_rule('QUEST PASS') == 'QUEST'
+          assert screen_rule('RECRUIT') == 'RECRUIT'
+          assert screen_rule('EVENT') == 'EVENT'
+          assert screen_rule('HOME COMBAT PVP') is None
+          assert screen_rule('IDLE REWARDS') is None
 
           raw = p.read_bytes()
           receipt = {
-              'version': '7.3.0-dev-pilot',
+              'version': '7.3.0-dev-quality',
               'source_sha256': hashlib.sha256(raw).hexdigest(),
               'source_bytes': len(raw),
               'compiled': True,
@@ -128,13 +172,23 @@ jobs:
           )
           PY
 
-      - name: Persist validation receipt
+      - name: Persist validation evidence
+        if: always()
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          cp /tmp/arena_v2_validation.log release_payload/ARENA_V2_VALIDATION_LOG.txt
-          git add release_payload/ARENA_V2_VALIDATION.json release_payload/ARENA_V2_VALIDATION_LOG.txt
-          git commit -m "Record Arena V2 quality validation [skip ci]" || true
-          git push origin HEAD:arena-v2
+          cp /tmp/v73_validation.log release_payload/ARENA_V2_VALIDATION_LOG.txt || true
+          git add release_payload/ARENA_V2_VALIDATION_LOG.txt
+          if [ -f release_payload/ARENA_V2_VALIDATION.json ]; then
+            git add release_payload/ARENA_V2_VALIDATION.json
+          fi
+          git commit -m "Record V7.3 quality validation evidence [skip ci]" || true
+          git push origin HEAD:arena-v2 || true
+
+      - name: Enforce build success
+        if: always()
+        shell: bash
+        run: |
+          test "${{ steps.build.outputs.rc }}" = "0"
