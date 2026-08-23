@@ -60,6 +60,41 @@ jobs:
           echo "TAG=$TAG" >> "$GITHUB_ENV"
           echo "ZIP=$ZIP" >> "$GITHUB_ENV"
 
+      - name: Record validation receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib, json, os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          version = os.environ["VERSION"]
+          source = Path(f"dist/TG_BTC_Arena_Companion_v{version}/tg_arena_bot.py")
+          record = {
+              "version": version,
+              "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+              "source_bytes": source.stat().st_size,
+              "validated_at": datetime.now(timezone.utc).isoformat(),
+              "full_source_build": True,
+              "v7_2_0_hidden_validation": False,
+          }
+          pending = Path("/tmp/tg_arena_bot_v7_2_0.py")
+          if pending.exists():
+              record["v7_2_0_hidden_validation"] = True
+              record["v7_2_0_sha256"] = hashlib.sha256(pending.read_bytes()).hexdigest()
+              record["v7_2_0_bytes"] = pending.stat().st_size
+          Path("release_payload/LAST_BUILD.json").write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add release_payload/LAST_BUILD.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Record validated build v${VERSION} [skip ci]"
+            git push
+          fi
+
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
