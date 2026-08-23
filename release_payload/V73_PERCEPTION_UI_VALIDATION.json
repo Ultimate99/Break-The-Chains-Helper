@@ -1,0 +1,25 @@
+{
+  "version": "7.3.0-dev-perception-ui",
+  "passed": true,
+  "source_sha256": "c5b6441ba8f19f2e1b22813a3dddc1752c545639e8a29aecab0f8a8f4de5331a",
+  "source_bytes": 447547,
+  "checks": {
+    "ui_marker": true,
+    "history_entry": true,
+    "page_method": true,
+    "power_calibration": true,
+    "hp_calibration": true,
+    "move_calibration": true,
+    "test_method": true,
+    "label_method": true,
+    "roi_minimums": true,
+    "six_hp_sequence": true,
+    "confidence_none_safe": true,
+    "explicit_verified_label": true,
+    "unknown_remains_unlabeled": true,
+    "running_calibration_blocked": true,
+    "all_methods_found": true,
+    "perception_ui_never_taps": true,
+    "label_does_not_change_signature": true
+  }
+}
