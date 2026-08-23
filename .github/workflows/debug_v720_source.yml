@@ -1,4 +1,4 @@
-name: Export V7.2 debug source
+name: Validate V7.2.1 HOME hotfix
 
 on:
   push:
@@ -11,20 +11,51 @@ permissions:
   contents: write
 
 jobs:
-  export:
+  validate:
     runs-on: ubuntu-latest
+    env:
+      TG_SKIP_MANIFEST_PUBLISH: "1"
     steps:
       - uses: actions/checkout@v4
-      - name: Build exact current V7.2 source
+      - name: Build and validate V7.2.1
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="$(tr -d '[:space:]' < VERSION)"
-          python release_payload/build_release.py --repo-root . --version "$VERSION" --output /tmp/debug_v720_source.py
-          python -m py_compile /tmp/debug_v720_source.py
-          cp /tmp/debug_v720_source.py release_payload/debug_v720_source.py
+          python release_payload/build_release.py \
+            --repo-root . \
+            --version "7.2.1" \
+            --output /tmp/tg_arena_bot_v7_2_1.py
+          python -m py_compile /tmp/tg_arena_bot_v7_2_1.py
+          python - <<'PY'
+          import hashlib, json
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          p = Path('/tmp/tg_arena_bot_v7_2_1.py')
+          raw = p.read_bytes()
+          text = raw.decode('utf-8')
+          checks = {
+              'app_version': text.count('APP_VERSION = "7.2.1"') == 1,
+              'home_hotfix_marker': text.count('V7.2.1: HOME is the only screen allowed a bounded soft match.') == 1,
+              'home_limit': text.count('if home_distance <= 20.0:') == 1,
+              'strict_other_screens_preserved': '"MAIL": {"MAIL"}' in text and '"SHOP": {"SHOP", "QUEST"}' in text,
+          }
+          if not all(checks.values()):
+              raise SystemExit(f'V7.2.1 validation failed: {checks}')
+          receipt = {
+              'version': '7.2.1',
+              'source_sha256': hashlib.sha256(raw).hexdigest(),
+              'source_bytes': len(raw),
+              'compiled': True,
+              'checks': checks,
+              'validated_at': datetime.now(timezone.utc).isoformat(),
+          }
+          Path('release_payload/V721_VALIDATION.json').write_text(
+              json.dumps(receipt, indent=2) + '\n', encoding='utf-8'
+          )
+          PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add release_payload/debug_v720_source.py
-          git commit -m "Export temporary V7.2 debug source [skip ci]"
+          git add release_payload/V721_VALIDATION.json
+          git commit -m "Validate v7.2.1 HOME hotfix [skip ci]"
           git push
