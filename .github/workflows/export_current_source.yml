@@ -1,0 +1,32 @@
+name: Export current source for Arena V2 work
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/export_current_source.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Export exact current source
+        shell: bash
+        env:
+          TG_SKIP_MANIFEST_PUBLISH: "1"
+        run: |
+          set -euo pipefail
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          python release_payload/build_release.py --repo-root . --version "$VERSION" --output /tmp/current_source.py
+          python -m py_compile /tmp/current_source.py
+          cp /tmp/current_source.py release_payload/debug_current_source.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add release_payload/debug_current_source.py
+          git commit -m "Export current source for Arena V2 inspection [skip ci]"
+          git push
