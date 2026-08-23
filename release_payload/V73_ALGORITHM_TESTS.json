@@ -1,0 +1,7 @@
+{
+  "version": "7.3.0-dev-algorithms",
+  "passed": false,
+  "build_rc": 0,
+  "test_rc": 1,
+  "log": "V73_ALGORITHM_TESTS.log"
+}
