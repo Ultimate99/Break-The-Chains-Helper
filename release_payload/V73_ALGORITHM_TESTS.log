@@ -3,6 +3,18 @@ Generated v7.2.2 hotfix: 363319 bytes, sha256=0f20427e63011263cf9c7bacb4d3e60417
 Updater manifest ready: v7.2.2, 363319 bytes, sha256=0f20427e63011263cf9c7bacb4d3e604175cd00dac29f218fecda665cc56f289, parts=5
 Generated v7.3.0: 448036 bytes, sha256=bc95436b0d63e573a6024bfa510a652ea61d9ed1f7c95369e646eb2a9e96ed81
 Traceback (most recent call last):
-  File "/home/runner/work/Break-The-Chains-Helper/Break-The-Chains-Helper/release_payload/test_v730_algorithms.py", line 11, in <module>
-    import cv2
-ModuleNotFoundError: No module named 'cv2'
+  File "/home/runner/work/Break-The-Chains-Helper/Break-The-Chains-Helper/release_payload/test_v730_algorithms.py", line 222, in <module>
+    main()
+  File "/home/runner/work/Break-The-Chains-Helper/Break-The-Chains-Helper/release_payload/test_v730_algorithms.py", line 211, in main
+    results = run(source)
+              ^^^^^^^^^^^
+  File "/home/runner/work/Break-The-Chains-Helper/Break-The-Chains-Helper/release_payload/test_v730_algorithms.py", line 34, in run
+    mod = load_generated(source_path)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/Break-The-Chains-Helper/Break-The-Chains-Helper/release_payload/test_v730_algorithms.py", line 20, in load_generated
+    spec.loader.exec_module(module)
+  File "<frozen importlib._bootstrap_external>", line 995, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/tmp/v73.py", line 21, in <module>
+    import tkinter as tk
+ModuleNotFoundError: No module named 'tkinter'
