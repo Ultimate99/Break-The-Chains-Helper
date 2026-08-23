@@ -1,1 +1,2 @@
 Validate deterministic v7.2.0 full-source patch against v7.1.2.
+Pass 2: exact v7.1.0 -> v7.1.2 bootstrap reconstruction.
