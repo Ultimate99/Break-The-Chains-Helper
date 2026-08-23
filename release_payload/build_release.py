@@ -1,14 +1,20 @@
 #!/usr/bin/env python3
-"""Entry point for deterministic TG:BTC full-source release builds.
-
-The implementation is stored compressed beside this file to keep the release
-payload compact. It reconstructs the checksum-verified v7.1.2 full source and
-applies the v7.2 Vision-First patch when VERSION is 7.2.0.
-"""
+"""Deterministic TG:BTC full-source release build entry point."""
 import base64
 import gzip
+import hashlib
 from pathlib import Path
 
-payload = Path(__file__).with_name("build_release_v720.py.gz.b64").read_text(encoding="utf-8").strip()
-source = gzip.decompress(base64.b64decode(payload)).decode("utf-8")
+EXPECTED_BUILDER_SHA256 = "bf120e8e651ce0139cefa36e99d3f76f880b11941b863480708be6fb30107a8e"
+root = Path(__file__).resolve().parent
+parts_dir = root / "build_release_v720_parts"
+parts = sorted(parts_dir.glob("part*.txt"))
+if not parts:
+    raise SystemExit("Missing v7.2 release-builder chunks")
+payload = "".join(p.read_text(encoding="utf-8").strip() for p in parts)
+source_bytes = gzip.decompress(base64.b64decode(payload))
+got = hashlib.sha256(source_bytes).hexdigest()
+if got != EXPECTED_BUILDER_SHA256:
+    raise SystemExit(f"Release-builder checksum mismatch: {got}")
+source = source_bytes.decode("utf-8")
 exec(compile(source, "build_release_v720.py", "exec"), globals(), globals())
