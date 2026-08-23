@@ -1,0 +1,14 @@
+#!/usr/bin/env python3
+"""V7.3 Daily self-healing recovery patch component."""
+
+def _replace_once(text, old, new, label):
+    count = text.count(old)
+    if count != 1:
+        raise RuntimeError(f"{label} expected one match, found {count}")
+    return text.replace(old, new, 1)
+
+def apply_daily_start_patch(text):
+    old = '''                home_ok,home_detail=self._daily_anchor_check("HOME",start_ref)\n                self.add_log(f"Daily {module}: HOME verification {'OK' if home_ok else 'FAILED'} • {home_detail}")\n                if not home_ok:\n                    self._daily_save_debug_frame(module,"00_not_home",start_ref)\n                    self._daily_set_status(module,"OPEN HOME")\n                    raise RuntimeError(f"Home screen could not be visually verified ({home_detail}). Open Home and retry.")\n'''
+    new = '''                home_ok,home_detail=self._daily_anchor_check("HOME",start_ref)\n                self.add_log(f"Daily {module}: HOME verification {'OK' if home_ok else 'FAILED'} • {home_detail}")\n                if not home_ok:\n                    # V7.3: recover from a known in-app page via the visible Home\n                    # control. Unknown screens are never navigated blindly.\n                    current_screen,current_conf,current_detail=self._vision_identify_screen(start_ref)\n                    if current_screen == "UNKNOWN":\n                        ocr_screen,ocr_text=self._daily_ocr_recognize_screen(start_ref)\n                        if ocr_screen in {"MAIL","SHOP","QUEST","EVENT","RECRUIT","CHAIN"}:\n                            self._vision_learn_screen(ocr_screen,start_ref,evidence="OCR:start")\n                            current_screen=ocr_screen\n                            current_detail=f"OCR {ocr_screen} • {ocr_text[:80]}"\n                    if current_screen in {"MAIL","SHOP","QUEST","EVENT","RECRUIT","CHAIN"}:\n                        self.add_log(f"Daily {module}: start is {current_screen}; safely returning Home • {current_detail}")\n                        if self._daily_return_home(module,max_attempts=4):\n                            start_ref=self._phone_reference_screenshot()\n                            home_ok,home_detail=self._daily_anchor_check("HOME",start_ref)\n                    if not home_ok:\n                        self._daily_save_debug_frame(module,"00_not_home",start_ref)\n                        self._daily_save_failure_frame(module,"start_not_home",start_ref,home_detail)\n                        self._daily_set_status(module,"OPEN HOME")\n                        raise RuntimeError(\n                            f"Home screen could not be safely verified ({home_detail}). "\n                            "Daily will not navigate from an unknown screen."\n                        )\n'''
+    text = _replace_once(text, old, new, "Daily safe start recovery")
+    return text
